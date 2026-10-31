@@ -1,0 +1,16 @@
+{
+  "name": "leki-p0-visual",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "vite": "6.3.5"
+  }
+}
