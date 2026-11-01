@@ -1,0 +1,32 @@
+{
+  "_note": "CAR_STATS_TRACKS_PROTO_DRAFT.md §5.1~5.3 코너 표와 직선 판정 표의 손계산 값(기준 차, 정점 이후 가속, 한계 일정 = k 0). 그대로 옮김",
+  "corners": {
+    "T1-02": { "vCorner": 107.1, "vEntry": 107.1, "vApex": 107.1, "vExit": 107.1, "D": 27.6, "exitLength": 92.1 },
+    "T1-04": { "vCorner": 83.3, "vEntry": 83.3, "vApex": 83.3, "vExit": 83.3, "D": 57.9, "exitLength": 112.5 },
+    "T1-06": { "vCorner": 100.0, "vEntry": 100.0, "vApex": 100.0, "vExit": 100.0, "D": 37.5, "exitLength": 107.5 },
+    "T1-08": { "vCorner": 96.2, "vEntry": 96.2, "vApex": 96.2, "vExit": 96.2, "D": 42.5, "exitLength": 122.4 },
+    "T2-02": { "vCorner": 93.8, "vEntry": 93.8, "vApex": 93.8, "vExit": 93.8, "D": 45.6, "exitLength": null },
+    "T2-03": { "vCorner": 115.4, "vEntry": 93.8, "vApex": 93.8, "vExit": 115.4, "D": 0, "exitLength": 42.1 },
+    "T2-05": { "vCorner": 83.3, "vEntry": 83.3, "vApex": 83.3, "vExit": 83.3, "D": 57.9, "exitLength": 72.2 },
+    "T2-07": { "vCorner": 100.0, "vEntry": 100.0, "vApex": 100.0, "vExit": 100.0, "D": 27.8, "exitLength": null },
+    "T2-08": { "vCorner": 107.1, "vEntry": 100.0, "vApex": 100.0, "vExit": 107.1, "D": 0, "exitLength": 54.4 },
+    "T3-02": { "vCorner": 83.3, "vEntry": 83.3, "vApex": 83.3, "vExit": 83.3, "D": 57.9, "exitLength": 75.4 },
+    "T3-04": { "vCorner": 88.2, "vEntry": 88.2, "vApex": 88.2, "vExit": 88.2, "D": 44.6, "exitLength": null },
+    "T3-05": { "vCorner": 100.0, "vEntry": 88.2, "vApex": 88.2, "vExit": 100.0, "D": 0, "exitLength": 72.4 },
+    "T3-07": { "vCorner": 107.1, "vEntry": 107.1, "vApex": 107.1, "vExit": 107.1, "D": 27.6, "exitLength": 37.2 },
+    "T3-09": { "vCorner": 93.8, "vEntry": 93.8, "vApex": 93.8, "vExit": 93.8, "D": 42.8, "exitLength": 92.1 }
+  },
+  "straights": {
+    "T1-01": { "vS": 125, "D": 27.6, "reachTop": true },
+    "T1-03": { "vS": 125, "D": 57.9, "reachTop": true },
+    "T1-05": { "vS": 125, "D": 37.5, "reachTop": true },
+    "T1-07": { "vS": 125, "D": 42.5, "reachTop": true },
+    "T2-01": { "vS": 125, "D": 45.6, "reachTop": true },
+    "T2-04": { "vS": 125, "D": 57.9, "reachTop": true },
+    "T2-06": { "vS": 119.0, "D": 27.8, "reachTop": false },
+    "T3-01": { "vS": 125, "D": 57.9, "reachTop": true },
+    "T3-03": { "vS": 120.3, "D": 44.6, "reachTop": false },
+    "T3-06": { "vS": 125, "D": 27.6, "reachTop": true },
+    "T3-08": { "vS": 123.3, "D": 42.8, "reachTop": false }
+  }
+}
