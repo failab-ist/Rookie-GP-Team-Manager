@@ -4,6 +4,7 @@
 > 대상: M1(직선형), M2(코너형), M3(균형형). 옛 트랙 T1~T3는 CAR 초안 §5에 남아 있으며 이 문서는 고치지 않는다.
 > 근거 초안: CAR = `design_ssot/drafts/CAR_STATS_TRACKS_PROTO_DRAFT.md`, INT = `design_ssot/drafts/RACE_INTERACTION_P0_DRAFT.md`, 단위 · 길이 = `design_ssot/drafts/RACE_UNIT_LENGTH_CAMERA_P0_DRAFT.md`.
 > 승인 기획: AG-P030 A(`.studio/decisions.jsonl:42`). 이 문서는 CAR 본문, INT 본문, `prototypes/` 코드를 수정하지 않는다.
+> 짝 문서: `design_ssot/drafts/PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md`(코너 방향 · 안쪽 차선 · 추격 부스트 구간, AG-P035 가안). 이 문서의 §7 값은 바꾸지 않는다.
 
 ---
 
@@ -568,7 +569,7 @@ E = (T_orig − T_+1) / T_orig, R = E_accel / mean(E_top, E_grip, E_brake), 합�
 | Q-65 | 가속 R이 합격 범위(0.75 ~ 1.33) 밖. 이 문서는 R을 계산하지 않음 | O-002 | (a) 가속 구간이 긴 직선 추가 (b) 능력치 매핑 변경 (c) R 범위 재정의 | 축소안을 고른 뒤 같은 안에서 잰다. 공식과 계수는 바꾸지 않는다 |
 | Q-66 | CAR F7과 §4.3에 k 항이 없음. k 값 미정 | O-002 | (a) CAR에 k 항 추가 (b) k = 0 고정 (c) k 값을 USER가 정함 | 정식 판정은 k = 0. k = 0.2 참고 열은 근거가 생길 때까지 참고만 |
 | Q-67 | 추월 0건의 트랙 밖 원인(출발 순서, 블로킹, 탐색 조건) | O-001 | 같은 시드로 원인을 측정 | 트랙을 바꾸기 전에 측정 |
-| Q-68 | 코너 방향 필드 추가 여부(현재 모든 코너 안쪽 = 0, `config.ts:81`) | O-001 | (a) 방향 필드 추가 (b) 보류 | (b). 방향은 정하지 않는다 |
+| Q-68 | 코너 방향 필드 추가 여부(현재 모든 코너 안쪽 = 0, `config.ts:81`) | O-001 | (a) 방향 필드 추가 (b) 보류 | (b). 방향은 정하지 않는다. AG-P035에서 다룸 → 짝 문서 Q-77 |
 | Q-69 | GLOSSARY 등록: 추월 직선, 묶음 머리 · 내부 · 꼬리, 헤어핀(V_c ≤ 50), 정점, 직선 배율, 축소안, 대표 코너, 경계값 | O-002 | AGENTS.md §3에 따라 USER 승인 뒤 등록. 현재 GLOSSARY에 이 용어들은 없다(Grep 0건) | USER 승인 뒤 등록 |
 | Q-70 | 추월 가능 직선의 길이와 개수 | O-001 | (a) AG-P032 실험으로 정함 (b) 헤어핀 뒤 직선만 쓴다 | (a). 실험 전에는 추월 기준을 쓰지 않는다. AG-P032는 아직 기록이 없다 |
 | Q-71 | 직선 배율 S의 0.05 단위가 적합한가 | O-001 | (a) 0.05 (b) 0.01 | (a). 0.05 격자에서 S_min이 세 안 모두 1.00 이하이면 충분 |
