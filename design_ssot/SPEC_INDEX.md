@@ -57,5 +57,7 @@ codename=`leki`
 | `design_ssot/TECH_STACK.md` | 기술 선택 · 기술 검증 계획 |
 | `design_ssot/OPEN.md` | 미결정 항목 |
 | `design_ssot/CHANGELOG.md` | 설계 변경 이력 |
+| `design_ssot/templates/SYSTEM_TEMPLATE.md` | 시스템 문서 템플릿(작성 규칙은 AGENTS.md §8) |
+| `design_ssot/drafts/` | 초안(확정 아님) |
 
 기획서 v0.5의 상세 규칙(경제 · 리그 · 시즌 · BM 세부)은 아직 owner 문서로 옮기지 않았다. 해당 주제를 작업할 때 owner 문서(예: `ECONOMY.md`, `LEAGUE.md`)를 만들어 이 표에 등록하고, 그 전까지는 원본 기획서를 참고 자료로 읽는다.
