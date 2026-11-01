@@ -13,7 +13,7 @@
   "docs": [
     {
       "path": "AGENTS.md",
-      "about": "작업 규칙 · 기준 정보 우선순위"
+      "about": "작업 규칙과 기준 정보 우선순위"
     },
     {
       "path": "GAME_VISION.md",
@@ -21,11 +21,11 @@
     },
     {
       "path": "design_ssot/SPEC_INDEX.md",
-      "about": "현행 설계 문서 목차 — 기획 근거는 여기서 찾는다"
+      "about": "현행 설계 문서 목차. 기획 근거는 여기서 찾는다"
     },
     {
       "path": "design_ssot/GLOSSARY.md",
-      "about": "용어집(이름 · 금지 표현)"
+      "about": "용어집(이름과 금지 표현)"
     },
     {
       "path": "design_ssot/OPEN.md",
@@ -33,7 +33,7 @@
     },
     {
       "path": "design_ssot/TECH_STACK.md",
-      "about": "기술 스택 · 시뮬레이터 경계"
+      "about": "기술 스택과 시뮬레이터 경계"
     }
   ],
   "max_hops": 4,

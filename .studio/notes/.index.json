@@ -3,12 +3,7 @@
  "tasks": [],
  "releases": [],
  "open": {
-  "cards": [
-   {
-    "id": "(첫 실행 전)",
-    "title": "수신함의 안건 카드 10장이 작업실을 켜면 올라옵니다"
-   }
-  ],
+  "cards": [],
   "running": null
  }
 }
