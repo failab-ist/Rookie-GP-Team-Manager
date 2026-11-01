@@ -91,6 +91,9 @@ SPEC_INDEX → 해당 owner 문서 → 필요한 부분만 읽기
 
 이 저장소의 작업은 솔브리 작업실(오케스트레이터 `failab-ist/ai-dev-orchestrator`)이 나눠 맡긴다. 디렉터(USER)는 회의 → 안건 → 작업 탭에서 안건 카드 버튼으로만 결정한다.
 - 기본 담당: 기획은 Claude Opus, 코드 작성은 Claude Sonnet, 문서 작성은 Claude Haiku, 검수는 주로 GPT(한글 문구 검수만 Claude). 작업 탭의 단계 설정에서 단계마다 바꿀 수 있다.
+- 회의(단톡방)는 디렉터 · 프로듀서(Claude) · GPT(검토자)가 함께 한다. `@GPT` · `@모두` · `/토론 주제`. 토론 결과는 안건 카드로 올라온다.
+- 작업 노트: `.studio/notes/`(옵시디언 보관함으로 열기). AI는 `요약.md`부터 보고 필요한 노트 · 문서만 읽는다. 노트는 작업 커밋에 같이 들어간다.
+- 버전: [반영] 한 번 = 커밋 하나(`feat:` · `docs:`). 버전은 작업 탭의 버전 안건으로 태그(v0.x.y) + 루트 `CHANGELOG.md`. 푸시는 디렉터가 GitHub Desktop에서 직접(태그 포함).
 - 실행: 저장소 루트의 `start_studio.cmd` 더블클릭. 엔진은 `.studio/engine`에 받아 두며 GitHub에 올리지 않는다(`.studio/.gitignore`). 스튜디오 설정 · 안건 · 결정 기록(`.studio/studio.json` · `agenda/` · `decisions.jsonl`)은 커밋한다.
 - 결과를 재현해야 하는 코드(레이스 시뮬레이터)에는 `Math.random` · `Date.now` · 렌더러(Phaser · React) import를 쓰지 않는다. 시드 난수만 쓴다(`design_ssot/TECH_STACK.md` 시뮬레이터 경계).
 - 직원은 지시받은 허용 경로만 고친다. 다른 직원을 부르거나 결정을 대신하지 않는다.

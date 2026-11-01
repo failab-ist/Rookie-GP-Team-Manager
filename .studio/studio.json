@@ -9,5 +9,33 @@
   "max_revisions": 2,
   "default_main": {
     "agent": "claude"
-  }
+  },
+  "docs": [
+    {
+      "path": "AGENTS.md",
+      "about": "작업 규칙 · 기준 정보 우선순위"
+    },
+    {
+      "path": "GAME_VISION.md",
+      "about": "게임 비전(확정 방향)"
+    },
+    {
+      "path": "design_ssot/SPEC_INDEX.md",
+      "about": "현행 설계 문서 목차 — 기획 근거는 여기서 찾는다"
+    },
+    {
+      "path": "design_ssot/GLOSSARY.md",
+      "about": "용어집(이름 · 금지 표현)"
+    },
+    {
+      "path": "design_ssot/OPEN.md",
+      "about": "미결 목록"
+    },
+    {
+      "path": "design_ssot/TECH_STACK.md",
+      "about": "기술 스택 · 시뮬레이터 경계"
+    }
+  ],
+  "max_hops": 4,
+  "debate_rounds": 1
 }
