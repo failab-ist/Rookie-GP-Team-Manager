@@ -10,5 +10,7 @@
     "allowImportingTsExtensions": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  // Node 타입 없이 검사해 시뮬 코어가 node: API를 쓰지 않음을 확인한다. CLI만 Node 전용
+  "include": ["src"],
+  "exclude": ["src/cli.ts"]
 }

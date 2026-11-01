@@ -1,0 +1,240 @@
+{
+  "_note": "시험용 입력. 트랙은 프로토 트랙 3종이 아니고 구간 수치 근거 없음. 차량 능력치는 AG-P020 초안 전 자리표시이며 주행에 반영되지 않음. 레이서 A 7/4/4는 RACER_STATS_PASSIVES_DRAFT.md:80, NPC 5/5/5는 같은 문서 :269 (모두 가안)",
+  "seed": 42,
+  "laps": 3,
+  "track": {
+    "id": "test-oval",
+    "segments": [
+      {
+        "kind": "straight",
+        "length": 400,
+        "bend": 0,
+        "width": 3,
+        "passable": true
+      },
+      {
+        "kind": "corner",
+        "length": 150,
+        "bend": 0.5,
+        "width": 3,
+        "passable": false
+      },
+      {
+        "kind": "straight",
+        "length": 300,
+        "bend": 0,
+        "width": 3,
+        "passable": true
+      },
+      {
+        "kind": "corner",
+        "length": 150,
+        "bend": 0.5,
+        "width": 3,
+        "passable": false
+      }
+    ]
+  },
+  "entries": [
+    {
+      "racer": {
+        "id": "racer-A",
+        "stats": {
+          "overtake": 7,
+          "control": 4,
+          "focus": 4
+        },
+        "passiveId": "passive-A"
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-1",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-2",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-3",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-4",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-5",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-6",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-7",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-8",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    },
+    {
+      "racer": {
+        "id": "npc-9",
+        "stats": {
+          "overtake": 5,
+          "control": 5,
+          "focus": 5
+        },
+        "passiveId": null
+      },
+      "car": {
+        "id": "placeholder-car",
+        "stats": {
+          "topSpeed": 5,
+          "accel": 5,
+          "grip": 5,
+          "brake": 5
+        }
+      }
+    }
+  ]
+}
