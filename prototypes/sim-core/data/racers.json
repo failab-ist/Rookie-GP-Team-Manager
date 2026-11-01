@@ -1,0 +1,9 @@
+{
+  "_note": "프로토 레이서 3명과 NPC (RACER_STATS_PASSIVES_DRAFT.md:80, :94, :108, :269, 가안). 능력치 추월/제어/집중 합 15. 패시브 id는 GLOSSARY 미등록 (틈새 사냥꾼, 코너 설계자, 침착한 해결사)",
+  "racers": [
+    { "id": "A", "stats": { "overtake": 7, "control": 4, "focus": 4 }, "passiveId": "gap-hunter" },
+    { "id": "B", "stats": { "overtake": 4, "control": 7, "focus": 4 }, "passiveId": "corner-architect" },
+    { "id": "C", "stats": { "overtake": 4, "control": 4, "focus": 7 }, "passiveId": "calm-solver" },
+    { "id": "NPC", "stats": { "overtake": 5, "control": 5, "focus": 5 }, "passiveId": null }
+  ]
+}

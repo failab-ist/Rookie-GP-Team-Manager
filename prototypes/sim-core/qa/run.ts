@@ -1,19 +1,26 @@
 // 자동 QA (CAR_STATS_TRACKS_PROTO_DRAFT.md §12). 마크다운 표를 stdout으로 낸다.
-// node qa/run.ts [handcalc|layer1|layer2|ksweep|length|all]
-// 확인용 시드는 layer2(k = 가안) 판정에만 쓴다. ksweep은 조정용 시드만 쓴다 (디렉터 2026-11-02).
+// node qa/run.ts [handcalc|layer1|layer2|racers|accel|length|all]
+// 확인용 시드는 2층 판정에만 쓴다. 확인용 결과로 계수를 고치지 않는다. 2단계 k 비교 결과는 qa/results/2026-11-02.md
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import {
+  ACCEL_R_RANGE,
   BASE_CAR_STAT,
   EXIT_LIMIT_RELAX,
+  L2_OPPONENTS,
+  L2_SATURATION_MEAN,
+  L2_SATURATION_TOP,
+  L2_SPREAD_MIN,
+  M18_BLOCK_RATIO,
+  M18_CONTACTS,
+  M18_OVERTAKE_RACE_SHARE,
   QA_ADJUST_SEEDS,
-  QA_ADVANCE_SHARE,
   QA_CONFIRM_SEEDS,
   QA_DELTA,
   QA_L_EXIT,
-  QA_Q_RANK,
   QA_THETA0,
   QA_THETA1,
+  TICK_SECONDS,
 } from '../src/config.ts';
 import { at, buildCourse, carParams, runSolo, type CarParams, type Trace } from '../src/physics.ts';
 import { simulate } from '../src/sim.ts';
@@ -24,7 +31,6 @@ const load = (p: string) => JSON.parse(readFileSync(new URL(p, import.meta.url),
 const TRACKS: Track[] = ['T1', 'T2', 'T3'].map((t) => load(`../data/tracks/${t}.json`));
 const CARS: { id: string; stats: CarStats }[] = load('../data/cars.json').cars;
 const HAND = load('./handcalc.json');
-const K_SWEEP = [0, 0.1, 0.2, 0.3];
 const STATS: (keyof CarStats)[] = ['topSpeed', 'accel', 'grip', 'brake'];
 const STAT_KO: Record<keyof CarStats, string> = { topSpeed: '최고속도', accel: '가속력', grip: '접지력', brake: '제동력' };
 const BASE: CarStats = { topSpeed: BASE_CAR_STAT, accel: BASE_CAR_STAT, grip: BASE_CAR_STAT, brake: BASE_CAR_STAT };
@@ -240,125 +246,236 @@ function printLayer1(k: number): void {
   out('</details>');
 }
 
-// ---------- 2층 순위 비교 (CAR §12.2, M-13) ----------
+// ---------- 2층 재정의 (INT §9.2, M-17 · M-18) ----------
+// INT = design_ssot/drafts/RACE_INTERACTION_P0_DRAFT.md. 상대 9대 F-2 고정 목록, 테스트 차 1대(원본 / +1 / +2)
 
-const NPC = { overtake: 5, control: 5, focus: 5 }; // 9대 고정 프로필 = 테스트 차 레이서도 같음 (RACER_STATS_PASSIVES_DRAFT.md:269 가안)
-const entry = (stats: CarStats, i: number): Entry => ({ racer: { id: `npc-${i}`, stats: NPC, passiveId: null }, car: { id: i === 0 ? 'test' : 'base', stats } });
-const rankOfTest = (track: Track, seed: number, stats: CarStats, k: number) =>
-  simulate({ seed, track, laps: 3, entries: Array.from({ length: 10 }, (_, i) => entry(i === 0 ? stats : BASE, i)) }, k).finishOrder.indexOf(0) + 1;
+type Combo = { reaction: boolean; slipstream: boolean };
+const COMBOS: Combo[] = [
+  { reaction: false, slipstream: false },
+  { reaction: false, slipstream: true },
+  { reaction: true, slipstream: false },
+  { reaction: true, slipstream: true },
+];
+const comboName = (c: Combo) => `${c.reaction ? 'R1' : 'R0'} · ${c.slipstream ? 'SS-1' : 'SS-0'}`;
+const NPC = { overtake: 5, control: 5, focus: 5 }; // 상대 레이서 고정 프로필 (RACER_STATS_PASSIVES_DRAFT.md:269 가안, 패시브 없음)
+const toStats = (a: number[]): CarStats => ({ topSpeed: a[0], accel: a[1], grip: a[2], brake: a[3] });
+const opponents = (): Entry[] =>
+  L2_OPPONENTS.map((o, i) => ({ racer: { id: `npc-${i + 1}`, stats: NPC, passiveId: null }, car: { id: `O${i + 1}`, stats: toStats(o) } }));
+const race = (track: Track, seed: number, test: Entry, combo: Combo) =>
+  simulate({ seed, track, laps: 3, entries: [test, ...opponents()] }, { ...combo, k: EXIT_LIMIT_RELAX });
+const testCar = (stats: CarStats, racer: Entry['racer'] = { id: 'test', stats: NPC, passiveId: null }): Entry => ({
+  racer,
+  car: { id: 'test', stats },
+});
+const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+const sd = (a: number[]) => Math.sqrt(mean(a.map((x) => (x - mean(a)) ** 2)));
 
-type L2 = { stat: keyof CarStats; perTrack: Record<string, { orig: number; plus: number; changed: number; ahead: number }>; orig: number; plus: number; changed: number; ahead: number; pass: boolean };
+type RaceSummary = { rank: number; blockRatio: number; overtakes: number; contacts: number; ticks: number };
+const summarize = (r: ReturnType<typeof simulate>): RaceSummary => ({
+  rank: r.finishOrder.indexOf(0) + 1,
+  blockRatio: r.carStats.reduce((a, c) => a + c.blockedTicks, 0) / r.carStats.reduce((a, c) => a + c.racingTicks, 0),
+  overtakes: r.carStats.reduce((a, c) => a + c.successes, 0),
+  contacts: r.carStats.reduce((a, c) => a + c.contacts, 0) / 2,
+  ticks: r.ticks,
+});
+const origCache = new Map<string, RaceSummary>();
+const origRun = (combo: Combo, track: Track, seed: number) => {
+  const key = `${comboName(combo)}|${track.id}|${seed}`;
+  if (!origCache.has(key)) origCache.set(key, summarize(race(track, seed, testCar(BASE), combo)));
+  return origCache.get(key)!;
+};
 
-function layer2(seeds: number[], k: number): L2[] {
-  const origRank = new Map<string, number>();
-  for (const t of TRACKS) for (const s of seeds) origRank.set(`${t.id}:${s}`, rankOfTest(t, s, BASE, k));
-  return STATS.map((stat) => {
-    const plusStats = { ...BASE, [stat]: BASE[stat] + QA_DELTA };
-    let o = 0, pl = 0, ch = 0, ah = 0, n = 0;
-    const perTrack: L2['perTrack'] = {};
-    for (const t of TRACKS) {
-      let to = 0, tp = 0, tc = 0, ta = 0;
-      for (const s of seeds) {
-        const ro = origRank.get(`${t.id}:${s}`)!;
-        const rp = rankOfTest(t, s, plusStats, k);
-        to += ro;
-        tp += rp;
-        if (rp !== ro) tc++;
-        if (rp < ro) ta++;
-      }
-      perTrack[t.id] = { orig: to / seeds.length, plus: tp / seeds.length, changed: tc / seeds.length, ahead: tc ? ta / tc : 0 };
-      o += to; pl += tp; ch += tc; ah += ta; n += seeds.length;
+function layer2(seeds: number[], combo: Combo) {
+  const orig: RaceSummary[] = [];
+  let controlDiff = 0;
+  for (const t of TRACKS)
+    for (const s of seeds) {
+      const o = origRun(combo, t, s);
+      orig.push(o);
+      if (summarize(race(t, s, testCar(BASE), combo)).rank !== o.rank) controlDiff++; // 대조군: 원본을 한 번 더
     }
-    const r = { orig: o / n, plus: pl / n, changed: ch / n, ahead: ch ? ah / ch : 0 };
-    return { stat, perTrack, ...r, pass: r.plus <= r.orig && r.changed >= QA_Q_RANK && r.ahead >= QA_ADVANCE_SHARE };
+  const m18 = {
+    block: mean(orig.map((r) => r.blockRatio)),
+    overtakeShare: mean(orig.map((r) => (r.overtakes > 0 ? 1 : 0))),
+    contacts: orig.reduce((a, r) => a + r.contacts, 0),
+  };
+  const m18Fails = [
+    m18.block < M18_BLOCK_RATIO && '막힘',
+    m18.overtakeShare < M18_OVERTAKE_RACE_SHARE && '추월',
+    m18.contacts < M18_CONTACTS && '접촉',
+  ].filter(Boolean);
+  const spread = sd(orig.map((r) => r.rank));
+  const perStat = STATS.map((stat) => {
+    const ranks = (d: number) =>
+      TRACKS.flatMap((t) => seeds.map((s) => summarize(race(t, s, testCar({ ...BASE, [stat]: BASE[stat] + d }), combo)).rank));
+    const r1 = ranks(1);
+    const r2 = ranks(2);
+    const d1 = mean(orig.map((o, i) => o.rank - r1[i]));
+    const d2 = mean(orig.map((o, i) => o.rank - r2[i]));
+    const top1 = mean(r1.map((r) => (r === 1 ? 1 : 0)));
+    const fails = [
+      !(d2 >= d1 && d1 > 0) && '단조성',
+      spread < L2_SPREAD_MIN && '퍼짐',
+      !(top1 <= L2_SATURATION_TOP && mean(r1) >= L2_SATURATION_MEAN) && '포화',
+      m18Fails.length && `상호작용(${m18Fails.join('·')})`,
+    ].filter(Boolean);
+    const verdict = controlDiff ? '무효(대조군)' : fails.length ? `판별 불가: ${fails.join(', ')}` : '통과';
+    return { stat, d1, d2, top1, meanR1: mean(r1), verdict };
   });
+  return { controlDiff, n: orig.length, spread, m18, perStat };
 }
 
-const seedHash = (s: number[]) => createHash('sha256').update(JSON.stringify(s)).digest('hex').slice(0, 16);
+const listHash = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex').slice(0, 16);
 
 function printLayer2(): void {
-  out(`## QA 2층 순위 비교 (CAR §12.2, k=${EXIT_LIMIT_RELAX}, 3랩, 테스트 차 1대 + 기준 차 9대)`);
+  out(`## QA 2층 재정의 (INT §9.2, k=${EXIT_LIMIT_RELAX}, 3랩, 테스트 차 1대 + F-2 상대 9대)`);
   out();
-  out(`조정용 시드 ${QA_ADJUST_SEEDS[0]}~${QA_ADJUST_SEEDS.at(-1)} (${QA_ADJUST_SEEDS.length}개, SHA-256 앞 16자 ${seedHash(QA_ADJUST_SEEDS)}), 확인용 시드 ${QA_CONFIRM_SEEDS[0]}~${QA_CONFIRM_SEEDS.at(-1)} (${QA_CONFIRM_SEEDS.length}개, ${seedHash(QA_CONFIRM_SEEDS)}). 판정은 확인용만.`);
-  for (const [name, seeds] of [['조정용 (기록만)', QA_ADJUST_SEEDS], ['확인용 (판정)', QA_CONFIRM_SEEDS]] as const) {
-    const res = layer2(seeds, EXIT_LIMIT_RELAX);
+  out(
+    `F-2 목록 SHA-256 앞 16자 ${listHash(L2_OPPONENTS)}. 조정용 시드 ${QA_ADJUST_SEEDS[0]}~${QA_ADJUST_SEEDS.at(-1)} (${listHash(QA_ADJUST_SEEDS)}), ` +
+      `확인용 ${QA_CONFIRM_SEEDS[0]}~${QA_CONFIRM_SEEDS.at(-1)} (${listHash(QA_CONFIRM_SEEDS)}). 판정은 확인용만. ` +
+      `통과 조건: 대조군 0, Δ2 ≥ Δ1 > 0, 퍼짐 ≥ ${L2_SPREAD_MIN}, +1 1위 비율 ≤ ${L2_SATURATION_TOP} · 평균 ≥ ${L2_SATURATION_MEAN}, ` +
+      `막힘 ≥ ${M18_BLOCK_RATIO * 100}% · 추월 있는 레이스 ≥ ${M18_OVERTAKE_RACE_SHARE} · 접촉 ≥ ${M18_CONTACTS}.`,
+  );
+  for (const [name, seeds] of [
+    ['확인용 (판정)', QA_CONFIRM_SEEDS],
+    ['조정용 (기록만)', QA_ADJUST_SEEDS],
+  ] as const) {
+    const rows: (string | number)[][] = [];
+    for (const combo of COMBOS) {
+      const r = layer2(seeds, combo);
+      const m = `막힘 ${f(r.m18.block * 100, 1)}%, 추월 레이스 ${f(r.m18.overtakeShare, 2)}, 접촉 ${r.m18.contacts}`;
+      for (const s of r.perStat)
+        rows.push([comboName(combo), STAT_KO[s.stat], `${r.controlDiff} / ${r.n}`, f(s.d1, 2), f(s.d2, 2), f(r.spread, 2), `${f(s.top1, 2)} · ${f(s.meanR1, 2)}`, m, s.verdict]);
+    }
     out();
     out(`### ${name}`);
     out();
-    out(
-      table(
-        ['능력치 +1', '트랙', '원본 평균 순위', '+1 평균 순위', '순위 바뀐 시드 비율', '바뀐 시드 중 +1이 앞선 비율', '판정'],
-        res.flatMap((r) => [
-          ...TRACKS.map((t) => {
-            const v = r.perTrack[t.id];
-            return [STAT_KO[r.stat], t.id, f(v.orig, 2), f(v.plus, 2), f(v.changed, 2), f(v.ahead, 2), '기록'];
-          }),
-          [STAT_KO[r.stat], '합계', f(r.orig, 2), f(r.plus, 2), f(r.changed, 2), f(r.ahead, 2), r.pass ? '통과' : '실패'],
-        ]),
-      ),
-    );
+    out(table(['조합', '능력치', '대조군 순위 차 시드', 'Δ1', 'Δ2', '퍼짐 sd', '+1 1위 비율 · 평균 순위', '상호작용 (M-18)', '판정'], rows));
   }
 }
 
-// ---------- k 비교 (조정용 시드만) · 경기 길이 ----------
+// ---------- 레이서 행동 비교 (같은 차, 레이서만 다름) ----------
 
-const raceSeconds = (track: Track, stats: CarStats, k: number) => {
-  const r = simulate({ seed: 42, track, laps: 3, entries: Array.from({ length: 10 }, (_, i) => entry(stats, i)) }, k);
-  return { ticks: r.ticks, seconds: r.seconds };
-};
+const RACERS: Entry['racer'][] = load('../data/racers.json').racers;
 
-function ksweep(): void {
-  const p0 = carParams(BASE);
-  const lap0 = new Map(TRACKS.map((t) => [t.id, measureLap(t, p0, 0)]));
-  out('## k 비교 (k = 0, 0.1, 0.2, 0.3. 2층은 조정용 시드만)');
+function printRacers(): void {
+  out(`## 레이서 행동 비교 (기준 차 + 레이서, 상대 F-2 9대, 확인용 시드 ${QA_CONFIRM_SEEDS.length}개 × 트랙 3종, 기록만)`);
   out();
-  out('탈출 가속 코너 = 기준 차 2랩째 출구 속도가 정점 속도보다 0.05 u/s 넘게 빠른 코너. V_top 잘림 = 코너 안 속도가 V_top(125)에 닿은 코너. 출구 차이 = k=0 대비.');
-  const rows: (string | number)[][] = [];
-  const exitRows: (string | number)[][] = [];
-  for (const k of K_SWEEP) {
-    const l1 = layer1(k).passByStat;
-    const l2 = layer2(QA_ADJUST_SEEDS, k);
-    for (const t of TRACKS) {
-      const m = measureLap(t, p0, k);
-      const corners = [...m.corners.entries()];
-      const exitAccel = corners.filter(([, c]) => c.vExit > c.vApex + 0.05).length;
-      const capped = corners.filter(([, c]) => c.vMax >= p0.vTop - EPS).length;
-      const diffs = corners.map(([id, c]) => c.vExit - lap0.get(t.id)!.corners.get(id)!.vExit);
-      const len = raceSeconds(t, BASE, k);
-      const errors = checkTrack(t, k).errors;
+  out('값은 테스트 차 1대의 레이스당 평균. 막힘 비율 = 막힌 틱 / 달린 틱. 0번 차선 비율 = 10대 전체가 0번 차선에 있던 틱 비율(차선 3개라 고르면 0.33).');
+  for (const combo of COMBOS) {
+    const rows: (string | number)[][] = [];
+    const solverRows: (string | number)[][] = [];
+    for (const racer of RACERS) {
+      const acc = { tries: 0, succ: 0, contacts: 0, blocked: 0, racing: 0, act: 0, lane0: 0, laneAll: 0, mistakes: 0, rank: 0, n: 0 };
+      const drawbacks: Record<string, number> = {};
+      const solver = { opportunities: 0, forfeits: 0, successesActive: 0, successesInactive: 0 };
+      for (const t of TRACKS)
+        for (const s of QA_CONFIRM_SEEDS) {
+          const r = race(t, s, testCar(BASE, racer), combo);
+          const c = r.carStats[0];
+          acc.tries += c.tries;
+          acc.succ += c.successes;
+          acc.contacts += c.contacts;
+          acc.blocked += c.blockedTicks;
+          acc.racing += c.racingTicks;
+          acc.act += c.passiveActivations;
+          acc.mistakes += c.mistakes;
+          acc.rank += r.finishOrder.indexOf(0) + 1;
+          acc.lane0 += r.carStats.reduce((a, x) => a + x.laneTicks[0], 0);
+          acc.laneAll += r.carStats.reduce((a, x) => a + x.racingTicks, 0);
+          for (const [k, v] of Object.entries(c.drawbacks)) drawbacks[k] = (drawbacks[k] ?? 0) + v;
+          for (const k of Object.keys(solver) as (keyof typeof solver)[]) solver[k] += c.solver[k];
+          acc.n++;
+        }
+      const per = (v: number) => f(v / acc.n, 2);
       rows.push([
-        k,
-        t.id,
-        errors.length ? `거부: ${errors.join('; ')}` : '통과',
-        `${exitAccel} / ${corners.length}`,
-        `평균 +${f(diffs.reduce((a, b) => a + b, 0) / diffs.length)}, 최대 +${f(Math.max(...diffs))}`,
-        capped,
-        `${len.ticks}틱 (${f(len.seconds, 2)}초), 랩 ${f(m.lapTime, 2)}초`,
-        t === TRACKS[0] ? STATS.map((s) => `${STAT_KO[s]} ${l1[s] ? '통과' : '실패'}`).join(', ') : '〃',
-        t === TRACKS[0] ? l2.map((r) => `${STAT_KO[r.stat]} ${r.pass ? '통과' : '실패'}(${f(r.orig, 2)}→${f(r.plus, 2)}, 바뀜 ${f(r.changed, 2)}, 앞섬 ${f(r.ahead, 2)})`).join(', ') : '〃',
+        racer.id,
+        `${racer.stats.overtake}/${racer.stats.control}/${racer.stats.focus}`,
+        racer.passiveId ?? '없음',
+        per(acc.tries),
+        per(acc.succ),
+        per(acc.contacts),
+        `${f((acc.blocked / acc.racing) * 100, 1)}%`,
+        per(acc.act),
+        Object.entries(drawbacks)
+          .map(([k, v]) => `${k} ${per(v)}`)
+          .join(', ') || '–',
+        per(acc.mistakes),
+        f(acc.lane0 / acc.laneAll, 2),
+        per(acc.rank),
       ]);
-      for (const [id, c] of corners) exitRows.push([k, id, f(c.vApex), f(c.vExit), f(c.vExit - lap0.get(t.id)!.corners.get(id)!.vExit), c.vMax >= p0.vTop - EPS ? '잘림' : '–']);
+      if (racer.passiveId === 'calm-solver')
+        solverRows.push([
+          racer.id,
+          per(solver.opportunities),
+          per(solver.forfeits),
+          solver.opportunities ? f(solver.forfeits / solver.opportunities, 2) : '–',
+          per(solver.successesActive),
+          per(solver.successesInactive),
+        ]);
     }
+    out();
+    out(`### ${comboName(combo)}`);
+    out();
+    out(table(['레이서', '추월/제어/집중', '패시브', '추월 시도', '추월 성공', '접촉', '막힘 비율', '패시브 발동', '반대급부', '혼전 실수', '0번 차선 비율', '평균 순위'], rows));
+    out();
+    out(table(['침착한 해결사', '발동 중 추월 기회', '포기(T-C)', '포기 비율', '발동 중 추월 성공', '발동 밖 추월 성공'], solverRows));
   }
-  out();
-  out(table(['k', '트랙', '코너 검사', '탈출 가속 코너', '출구 속도 차이 (u/s)', 'V_top 잘림 코너', '경기 길이 (기준 차 10대, 3랩)', '1층 (트랙 3종 합산)', '2층 조정용 (원본→+1 평균 순위)'], rows));
-  out();
-  out('<details><summary>코너별 출구 속도</summary>');
-  out();
-  out(table(['k', '코너', '정점 속도', '출구 속도', 'k=0 대비', 'V_top'], exitRows));
-  out();
-  out('</details>');
 }
 
-function length(): void {
-  out(`## 트랙별 경기 길이 (k=${EXIT_LIMIT_RELAX}, 3랩, 시드 42)`);
+// ---------- 가속 R (AG-P029 A, INT §4.7: 1바퀴 기록 기준) ----------
+
+function printAccelR(): void {
+  out(`## 가속 R (기준 차 단독 2랩째 랩 시간, 트랙 3종 평균, k=${EXIT_LIMIT_RELAX})`);
   out();
-  const rows = TRACKS.map((t) => {
-    const base = raceSeconds(t, BASE, EXIT_LIMIT_RELAX);
-    const lap = (stats: CarStats) => f(measureLap(t, carParams(stats), EXIT_LIMIT_RELAX).lapTime, 2);
-    return [t.id, base.ticks, f(base.seconds, 2), ...CARS.map((c) => lap(c.stats))];
-  });
-  out(table(['트랙', '기준 차 10대 경기 틱', '초', ...CARS.map((c) => `${c.id} 단독 랩 시간(초)`)], rows));
+  out(`E = (T원본 − T+1) / T원본, R = E_가속 / mean(E_최고속도, E_접지, E_제동). 목표 ${ACCEL_R_RANGE[0]} ≤ R ≤ ${ACCEL_R_RANGE[1]} (가안).`);
+  const rows: (string | number)[][] = [];
+  for (const formula of ['current', 'AC1'] as const) {
+    const lap = (stats: CarStats) => TRACKS.map((t) => measureLap(t, carParams(stats, formula), EXIT_LIMIT_RELAX).lapTime);
+    const base = lap(BASE);
+    const E = Object.fromEntries(
+      STATS.map((s) => {
+        const plus = lap({ ...BASE, [s]: BASE[s] + QA_DELTA });
+        return [s, mean(base.map((b, i) => (b - plus[i]) / b))];
+      }),
+    ) as Record<keyof CarStats, number>;
+    const denom = mean([E.topSpeed, E.grip, E.brake]);
+    const R = denom > 0 ? E.accel / denom : NaN;
+    rows.push([
+      formula === 'current' ? '현행 (CAR F3a)' : 'AC-1 (A = 30(1 + 1.33n))',
+      `A ${f(carParams(BASE, formula).A, 2)} → ${f(carParams({ ...BASE, accel: BASE.accel + QA_DELTA }, formula).A, 2)}`,
+      base.map((b) => f(b, 3)).join(' / '),
+      ...STATS.map((s) => pct(E[s])),
+      Number.isNaN(R) ? '판별 불가' : f(R, 2),
+      Number.isNaN(R) ? '–' : R >= ACCEL_R_RANGE[0] && R <= ACCEL_R_RANGE[1] ? '목표 안' : '목표 밖',
+    ]);
+  }
+  out();
+  out(table(['가속 공식', '기준 차 A → +1', '기준 랩 T1 / T2 / T3 (초)', 'E 최고속도', 'E 가속력', 'E 접지력', 'E 제동력', 'R', '판정'], rows));
+}
+
+// ---------- 차 X, Y 1바퀴 · 트랙별 경기 길이 ----------
+
+function printLength(): void {
+  out(`## 차 X, Y 1바퀴 시간 (단독 2랩째, k=${EXIT_LIMIT_RELAX}, 기록만 · AG-P019 B)`);
+  out();
+  out(
+    table(
+      ['트랙', ...CARS.map((c) => `${c.id} (초)`)],
+      TRACKS.map((t) => [t.id, ...CARS.map((c) => f(measureLap(t, carParams(c.stats), EXIT_LIMIT_RELAX).lapTime, 3))]),
+    ),
+  );
+  out();
+  out(`## 트랙별 경기 길이 (3랩, 기준 차 + F-2 9대, 확인용 시드 ${QA_CONFIRM_SEEDS.length}개 평균, 마지막 차 완주 기준)`);
+  out();
+  const rows = TRACKS.map((t) => [
+    t.id,
+    ...COMBOS.map((combo) => {
+      const ticks = mean(QA_CONFIRM_SEEDS.map((s) => origRun(combo, t, s).ticks));
+      return `${f(ticks, 1)}틱 (${f(ticks * TICK_SECONDS, 2)}초)`;
+    }),
+  ]);
+  out(table(['트랙', ...COMBOS.map(comboName)], rows));
 }
 
 const what = process.argv[2] ?? 'all';
@@ -366,8 +483,9 @@ const parts: Record<string, () => void> = {
   handcalc,
   layer1: () => printLayer1(EXIT_LIMIT_RELAX),
   layer2: printLayer2,
-  ksweep,
-  length,
+  racers: printRacers,
+  accel: printAccelR,
+  length: printLength,
 };
 for (const [name, fn] of Object.entries(parts)) {
   if (what === 'all' || what === name) {
