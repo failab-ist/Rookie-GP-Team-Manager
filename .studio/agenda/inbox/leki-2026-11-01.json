@@ -1,122 +1,527 @@
 [
-  {
-    "id": "AG-L001", "kind": "pick", "title": "Race Star 인앱 상품 서술 정정",
-    "bluf": "기획서·보고서의 Race Star 상품 인용이 오늘 확인한 목록과 다르다. 정정 메모를 남길지 결정.",
-    "context": "2026-11-01 App Store 상위 10개: Champion Pass·Triple Income Booster 없음, Sport Pass·Premium/VIP Fund·젬 2종·루트박스 표기 확인. '결제 전환율 1위'는 근거 없음. raw 원본은 수정 금지.",
-    "options": [
-      {"key": "A", "label": "정정 메모 작성", "pros": "이후 인용 실수 방지", "cons": "작업 1건", "cost": "S", "on_choose": "정정 메모 작업 카드 생성",
-       "task": {"goal": "reports/corrections/에 Race Star 인앱 상품 정정 메모를 쓴다. 2026-11-01 App Store 상위 10개 목록과 보고서·기획서의 다른 서술을 대조한다.", "allowed_paths": ["reports/corrections/"], "spec_refs": ["reports/AGENDA_2026-11-01.md", "reports/LEKI_COMPETITOR_DEEP_RESEARCH_v0.2.md", "reports/LEKI_COMPETITOR_ACTION_PLAN_v0.1.md"], "acceptance": ["확인된 사실과 미확인 주장을 구분", "출처와 확인 날짜 표기"], "forbidden": ["reports/raw/ 수정", "매출·전환율 추정"]}},
-      {"key": "B", "label": "기록만", "pros": "작업 없음", "cons": "다음 인용 때 다시 헷갈림", "cost": "S", "on_choose": "결정 로그에만 남김"}
-    ],
-    "recommend": {"key": "A", "why": "BM 논의 때 이 상품 목록을 다시 인용하게 된다."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:12"], "urgency": "now", "risk": "low", "reversible": true
+ {
+  "id": "AG-L001",
+  "kind": "pick",
+  "title": "Race Star 인앱 상품 서술 정정",
+  "bluf": "기획서, 보고서의 Race Star 상품 인용이 오늘 확인한 목록과 다르다. 정정 메모를 남길지 결정.",
+  "context": "2026-11-01 App Store 상위 10개: Champion Pass, Triple Income Booster 없음, Sport Pass, Premium/VIP Fund, 젬 2종, 루트박스 표기 확인. '결제 전환율 1위'는 근거 없음. raw 원본은 수정 금지.",
+  "options": [
+   {
+    "key": "A",
+    "label": "정정 메모 작성",
+    "pros": "이후 인용 실수 방지",
+    "cons": "작업 1건",
+    "cost": "S",
+    "on_choose": "정정 메모 작업 카드 생성",
+    "task": {
+     "goal": "reports/corrections/에 Race Star 인앱 상품 정정 메모를 쓴다. 2026-11-01 App Store 상위 10개 목록과 보고서, 기획서의 다른 서술을 대조한다.",
+     "allowed_paths": [
+      "reports/corrections/"
+     ],
+     "spec_refs": [
+      "reports/AGENDA_2026-11-01.md",
+      "reports/LEKI_COMPETITOR_DEEP_RESEARCH_v0.2.md",
+      "reports/LEKI_COMPETITOR_ACTION_PLAN_v0.1.md"
+     ],
+     "acceptance": [
+      "확인된 사실과 미확인 주장을 구분",
+      "출처와 확인 날짜 표기"
+     ],
+     "forbidden": [
+      "reports/raw/ 수정",
+      "매출, 전환율 추정"
+     ]
+    }
+   },
+   {
+    "key": "B",
+    "label": "기록만",
+    "pros": "작업 없음",
+    "cons": "다음 인용 때 다시 헷갈림",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   }
+  ],
+  "recommend": {
+   "key": "A",
+   "why": "BM 논의 때 이 상품 목록을 다시 인용하게 된다."
   },
-  {
-    "id": "AG-L002", "kind": "pick", "title": "패시브·능력치 초안을 어떻게 쓸지",
-    "bluf": "액션 플랜의 패시브 3종 초안(+40% 등)을 O-003·O-004 작업에 어떻게 쓸지 결정.",
-    "context": "초안 수치는 근거 없는 가안. 원인 로그는 TECH_STACK에 이미 있음. LOCKED: 총합 동일, 레이서당 고유 패시브 1개.",
-    "options": [
-      {"key": "A", "label": "참고 자료로 선택지 문서", "pros": "OPEN 규율 유지", "cons": "초안 재작성 필요", "cost": "M", "on_choose": "O-003·O-004 선택지 문서 작업 카드",
-       "task": {"goal": "레이서 3능력치의 시뮬 동작과 고유 패시브 3종(발동 조건·행동·반대급부·화면 표시)을 선택지 2~3개로 정리한 초안을 design_ssot/drafts/에 쓴다.", "allowed_paths": ["design_ssot/drafts/"], "spec_refs": ["design_ssot/SPEC_INDEX.md", "design_ssot/OPEN.md", "reports/LEKI_COMPETITOR_ACTION_PLAN_v0.1.md"], "acceptance": ["모든 수치에 '가안' 표기", "LOCKED(총합 동일·패시브 1개) 준수", "같은 차·레이서 A/B/C × 트랙 3종 자동 QA 검증 방법 포함"], "forbidden": ["SPEC_INDEX·OPEN·GAME_VISION 수정", "'확정' 표현"]}},
-      {"key": "B", "label": "초안 수치를 출발점으로", "pros": "빠름", "cons": "근거 없는 숫자가 굳음", "cost": "S", "on_choose": "결정 로그에만 남김"},
-      {"key": "C", "label": "사용 안 함", "pros": "오염 없음", "cons": "참고 아이디어 버림", "cost": "S", "on_choose": "결정 로그에만 남김"}
-    ],
-    "recommend": {"key": "A", "why": "시뮬레이터 전에 필요한 문서이고 OPEN 규율을 지킨다."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:13"], "blocks": ["O-003", "O-004"], "urgency": "now", "risk": "low", "reversible": true
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:12"
+  ],
+  "urgency": "now",
+  "risk": "low",
+  "reversible": true
+ },
+ {
+  "id": "AG-L002",
+  "kind": "pick",
+  "title": "패시브, 능력치 초안을 어떻게 쓸지",
+  "bluf": "액션 플랜의 패시브 3종 초안(+40% 등)을 O-003, O-004 작업에 어떻게 쓸지 결정.",
+  "context": "초안 수치는 근거 없는 가안. 원인 로그는 TECH_STACK에 이미 있음. LOCKED: 총합 동일, 레이서당 고유 패시브 1개.",
+  "options": [
+   {
+    "key": "A",
+    "label": "참고 자료로 선택지 문서",
+    "pros": "OPEN 규율 유지",
+    "cons": "초안 재작성 필요",
+    "cost": "M",
+    "on_choose": "O-003, O-004 선택지 문서 작업 카드",
+    "task": {
+     "goal": "레이서 3능력치의 시뮬 동작과 고유 패시브 3종(발동 조건, 행동, 반대급부, 화면 표시)을 선택지 2~3개로 정리한 초안을 design_ssot/drafts/에 쓴다.",
+     "allowed_paths": [
+      "design_ssot/drafts/"
+     ],
+     "spec_refs": [
+      "design_ssot/SPEC_INDEX.md",
+      "design_ssot/OPEN.md",
+      "reports/LEKI_COMPETITOR_ACTION_PLAN_v0.1.md"
+     ],
+     "acceptance": [
+      "모든 수치에 '가안' 표기",
+      "LOCKED(총합 동일, 패시브 1개) 준수",
+      "같은 차, 레이서 A/B/C × 트랙 3종 자동 QA 검증 방법 포함"
+     ],
+     "forbidden": [
+      "SPEC_INDEX, OPEN, GAME_VISION 수정",
+      "'확정' 표현"
+     ]
+    }
+   },
+   {
+    "key": "B",
+    "label": "초안 수치를 출발점으로",
+    "pros": "빠름",
+    "cons": "근거 없는 숫자가 굳음",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   },
+   {
+    "key": "C",
+    "label": "사용 안 함",
+    "pros": "오염 없음",
+    "cons": "참고 아이디어 버림",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   }
+  ],
+  "recommend": {
+   "key": "A",
+   "why": "시뮬레이터 전에 필요한 문서이고 OPEN 규율을 지킨다."
   },
-  {
-    "id": "AG-L003", "kind": "pick", "title": "첫날 공백을 메우는 방식",
-    "bluf": "입문전을 매일 00시 NPC 프렙 리그로 구체화할지 결정.",
-    "context": "정규 리그는 다음 월요일 편성이라 가입 요일에 따라 최대 6일 대기. GDD §5.7에 NPC 입문전은 이미 있음. 보고서의 '5~6일 깡통'은 과장.",
-    "options": [
-      {"key": "A", "label": "입문전만", "pros": "추가 작업 없음", "cons": "매일 돌아올 이유 약함", "cost": "S", "on_choose": "결정 로그에만 남김"},
-      {"key": "B", "label": "프렙 리그(매일 00시)", "pros": "정규 리그 리듬 미리 체험", "cons": "NPC 조 운영 규칙 필요", "cost": "M", "on_choose": "O-120 선택지 문서 작업 카드",
-       "task": {"goal": "루키 6전·NPC 입문전·프렙 리그(매일 00시 NPC 경기)를 잇는 첫날~첫 주 흐름 초안을 design_ssot/drafts/에 쓴다.", "allowed_paths": ["design_ssot/drafts/"], "spec_refs": ["design_ssot/OPEN.md", "reports/AGENDA_2026-11-01.md"], "acceptance": ["가입 요일별 대기일 표", "신규 티켓 4장과 중복 지급 검토", "스패너는 계정당 1회", "인간 조 중도 삽입 금지 준수"], "forbidden": ["SPEC_INDEX·OPEN 수정", "리그 경기 수 변경", "'확정' 표현"]}},
-      {"key": "C", "label": "B + 티켓 없는 스파링", "pros": "첫날 밀도 최대", "cons": "범위 증가, 축소판과 충돌", "cost": "L", "on_choose": "결정 로그에만 남김(나중 검토)"}
-    ],
-    "recommend": {"key": "B", "why": "축소판 범위 안에서 첫 주 공백을 메운다. C는 나중."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:14"], "blocks": ["O-120", "O-108"], "urgency": "now", "risk": "low", "reversible": true
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:13"
+  ],
+  "blocks": [
+   "O-003",
+   "O-004"
+  ],
+  "urgency": "now",
+  "risk": "low",
+  "reversible": true
+ },
+ {
+  "id": "AG-L003",
+  "kind": "pick",
+  "title": "첫날 공백을 메우는 방식",
+  "bluf": "입문전을 매일 00시 NPC 프렙 리그로 구체화할지 결정.",
+  "context": "정규 리그는 다음 월요일 편성이라 가입 요일에 따라 최대 6일 대기. GDD §5.7에 NPC 입문전은 이미 있음. 보고서의 '5~6일 깡통'은 과장.",
+  "options": [
+   {
+    "key": "A",
+    "label": "입문전만",
+    "pros": "추가 작업 없음",
+    "cons": "매일 돌아올 이유 약함",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   },
+   {
+    "key": "B",
+    "label": "프렙 리그(매일 00시)",
+    "pros": "정규 리그 리듬 미리 체험",
+    "cons": "NPC 조 운영 규칙 필요",
+    "cost": "M",
+    "on_choose": "O-120 선택지 문서 작업 카드",
+    "task": {
+     "goal": "루키 6전, NPC 입문전, 프렙 리그(매일 00시 NPC 경기)를 잇는 첫날~첫 주 흐름 초안을 design_ssot/drafts/에 쓴다.",
+     "allowed_paths": [
+      "design_ssot/drafts/"
+     ],
+     "spec_refs": [
+      "design_ssot/OPEN.md",
+      "reports/AGENDA_2026-11-01.md"
+     ],
+     "acceptance": [
+      "가입 요일별 대기일 표",
+      "신규 티켓 4장과 중복 지급 검토",
+      "스패너는 계정당 1회",
+      "인간 조 중도 삽입 금지 준수"
+     ],
+     "forbidden": [
+      "SPEC_INDEX, OPEN 수정",
+      "리그 경기 수 변경",
+      "'확정' 표현"
+     ]
+    }
+   },
+   {
+    "key": "C",
+    "label": "B + 티켓 없는 스파링",
+    "pros": "첫날 밀도 최대",
+    "cons": "범위 증가, 축소판과 충돌",
+    "cost": "L",
+    "on_choose": "결정 로그에만 남김(나중 검토)"
+   }
+  ],
+  "recommend": {
+   "key": "B",
+   "why": "축소판 범위 안에서 첫 주 공백을 메운다. C는 나중."
   },
-  {
-    "id": "AG-L004", "kind": "pick", "title": "경기 길이",
-    "bluf": "경기 길이를 지금 정할지, 시뮬레이터 실측 후 정할지 결정.",
-    "context": "GDD는 '토너먼트 1회 3~5분', O-001은 '경기 1회'로 적어 단위부터 다름. p0-visual 45~50초는 가짜 주행 기준.",
-    "options": [
-      {"key": "A", "label": "3~5분 유지", "pros": "기획서 그대로", "cons": "관전 지루함 위험", "cost": "S", "on_choose": "결정 로그에만 남김"},
-      {"key": "B", "label": "60~75초 + 배속", "pros": "모바일 세션에 맞음", "cons": "근거 없는 숫자", "cost": "S", "on_choose": "결정 로그에만 남김"},
-      {"key": "C", "label": "실측 후 결정", "pros": "근거 있는 결정", "cons": "결정이 늦어짐", "cost": "M", "on_choose": "단위 정리·실측 계획 메모 작업 카드",
-       "task": {"goal": "'경기 vs 토너먼트' 단위를 정리하고, 경기 길이·카메라 선택지와 P0 실측 계획을 design_ssot/drafts/에 메모로 쓴다.", "allowed_paths": ["design_ssot/drafts/"], "spec_refs": ["design_ssot/OPEN.md", "design_ssot/TECH_STACK.md", "reports/AGENDA_2026-11-01.md"], "acceptance": ["p0-visual 수치는 '가짜 주행 기준' 표기", "통과 기준은 TECH_STACK §P0-B"], "forbidden": ["길이 결정", "코드 수정"]}}
-    ],
-    "recommend": {"key": "C", "why": "시뮬레이터가 곧 만들어지니 실측이 싸다."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:15"], "blocks": ["O-001"], "urgency": "week", "risk": "low", "reversible": true
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:14"
+  ],
+  "blocks": [
+   "O-120",
+   "O-108"
+  ],
+  "urgency": "now",
+  "risk": "low",
+  "reversible": true
+ },
+ {
+  "id": "AG-L004",
+  "kind": "pick",
+  "title": "경기 길이",
+  "bluf": "경기 길이를 지금 정할지, 시뮬레이터 실측 후 정할지 결정.",
+  "context": "GDD는 '토너먼트 1회 3~5분', O-001은 '경기 1회'로 적어 단위부터 다름. p0-visual 45~50초는 가짜 주행 기준.",
+  "options": [
+   {
+    "key": "A",
+    "label": "3~5분 유지",
+    "pros": "기획서 그대로",
+    "cons": "관전 지루함 위험",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   },
+   {
+    "key": "B",
+    "label": "60~75초 + 배속",
+    "pros": "모바일 세션에 맞음",
+    "cons": "근거 없는 숫자",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   },
+   {
+    "key": "C",
+    "label": "실측 후 결정",
+    "pros": "근거 있는 결정",
+    "cons": "결정이 늦어짐",
+    "cost": "M",
+    "on_choose": "단위 정리, 실측 계획 메모 작업 카드",
+    "task": {
+     "goal": "'경기 vs 토너먼트' 단위를 정리하고, 경기 길이, 카메라 선택지와 P0 실측 계획을 design_ssot/drafts/에 메모로 쓴다.",
+     "allowed_paths": [
+      "design_ssot/drafts/"
+     ],
+     "spec_refs": [
+      "design_ssot/OPEN.md",
+      "design_ssot/TECH_STACK.md",
+      "reports/AGENDA_2026-11-01.md"
+     ],
+     "acceptance": [
+      "p0-visual 수치는 '가짜 주행 기준' 표기",
+      "통과 기준은 TECH_STACK §P0-B"
+     ],
+     "forbidden": [
+      "길이 결정",
+      "코드 수정"
+     ]
+    }
+   }
+  ],
+  "recommend": {
+   "key": "C",
+   "why": "시뮬레이터가 곧 만들어지니 실측이 싸다."
   },
-  {
-    "id": "AG-L005", "kind": "pick", "title": "'전체' 카메라 대신 1D 진행 바",
-    "bluf": "P0 비주얼 시험에 상단 1D 진행 바를 넣어 볼지 결정.",
-    "context": "'전체' 카메라는 차가 약 6×3px로 안 읽힘(USER도 확인). 상단 바에 10대 위치를 점으로 표시하는 안.",
-    "options": [
-      {"key": "A", "label": "P0 시험에 추가", "pros": "가독성 근거 확보", "cons": "시험 코드 작업", "cost": "S", "on_choose": "결정 로그 + 이후 코드 작업"},
-      {"key": "B", "label": "지금은 보류", "pros": "기획 먼저", "cons": "카메라 결정 근거 늦어짐", "cost": "S", "on_choose": "결정 로그에만 남김"}
-    ],
-    "recommend": {"key": "A", "why": "작은 변경으로 O-007 근거가 생긴다."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:16"], "blocks": ["O-007"], "urgency": "week", "risk": "low", "reversible": true
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:15"
+  ],
+  "blocks": [
+   "O-001"
+  ],
+  "urgency": "week",
+  "risk": "low",
+  "reversible": true
+ },
+ {
+  "id": "AG-L005",
+  "kind": "pick",
+  "title": "'전체' 카메라 대신 1D 진행 바",
+  "bluf": "P0 비주얼 시험에 상단 1D 진행 바를 넣어 볼지 결정.",
+  "context": "'전체' 카메라는 차가 약 6×3px로 안 읽힘(USER도 확인). 상단 바에 10대 위치를 점으로 표시하는 안.",
+  "options": [
+   {
+    "key": "A",
+    "label": "P0 시험에 추가",
+    "pros": "가독성 근거 확보",
+    "cons": "시험 코드 작업",
+    "cost": "S",
+    "on_choose": "결정 로그 + 이후 코드 작업"
+   },
+   {
+    "key": "B",
+    "label": "지금은 보류",
+    "pros": "기획 먼저",
+    "cons": "카메라 결정 근거 늦어짐",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   }
+  ],
+  "recommend": {
+   "key": "A",
+   "why": "작은 변경으로 O-007 근거가 생긴다."
   },
-  {
-    "id": "AG-L006", "kind": "pick", "title": "티어 캡 계산 방식 (CONFLICT)",
-    "bluf": "티어 캡을 차량 스탯 합만으로 계산하는 안은 기획서와 충돌. 선택지로만 기록할지 결정.",
-    "context": "GDD §5.5: 패시브를 코스트 밖 공짜로 취급하지 않는다. 보고서의 160/200/240 등은 근거 없는 숫자.",
-    "options": [
-      {"key": "A", "label": "O-005에 선택지로 기록", "pros": "논의 보존", "cons": "OPEN 문서 수정", "cost": "S", "on_choose": "OPEN 기록 작업 카드",
-       "task": {"goal": "design_ssot/OPEN.md의 O-005 '현재 가안·단서' 칸에 '차량 캡만 vs 종합 코스트(패시브 포함)' 선택지를 한 줄로 추가한다.", "allowed_paths": ["design_ssot/OPEN.md"], "spec_refs": ["design_ssot/OPEN.md", "reports/AGENDA_2026-11-01.md"], "acceptance": ["O-005 행만 수정", "상태는 OPEN 유지", "숫자 추가 금지"], "forbidden": ["다른 행 수정", "상태 변경"]}},
-      {"key": "B", "label": "기각", "pros": "기획서 방향 유지", "cons": "대안 기록 사라짐", "cost": "S", "on_choose": "결정 로그에만 남김"}
-    ],
-    "recommend": {"key": "A", "why": "결정은 시뮬 실측 후. 지금은 선택지만 보존."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:17"], "blocks": ["O-005", "O-106"], "urgency": "week", "risk": "low", "reversible": true
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:16"
+  ],
+  "blocks": [
+   "O-007"
+  ],
+  "urgency": "week",
+  "risk": "low",
+  "reversible": true
+ },
+ {
+  "id": "AG-L006",
+  "kind": "pick",
+  "title": "티어 캡 계산 방식 (CONFLICT)",
+  "bluf": "티어 캡을 차량 스탯 합만으로 계산하는 안은 기획서와 충돌. 선택지로만 기록할지 결정.",
+  "context": "GDD §5.5: 패시브를 코스트 밖 공짜로 취급하지 않는다. 보고서의 160/200/240 등은 근거 없는 숫자.",
+  "options": [
+   {
+    "key": "A",
+    "label": "O-005에 선택지로 기록",
+    "pros": "논의 보존",
+    "cons": "OPEN 문서 수정",
+    "cost": "S",
+    "on_choose": "OPEN 기록 작업 카드",
+    "task": {
+     "goal": "design_ssot/OPEN.md의 O-005 '현재 가안, 단서' 칸에 '차량 캡만 vs 종합 코스트(패시브 포함)' 선택지를 한 줄로 추가한다.",
+     "allowed_paths": [
+      "design_ssot/OPEN.md"
+     ],
+     "spec_refs": [
+      "design_ssot/OPEN.md",
+      "reports/AGENDA_2026-11-01.md"
+     ],
+     "acceptance": [
+      "O-005 행만 수정",
+      "상태는 OPEN 유지",
+      "숫자 추가 금지"
+     ],
+     "forbidden": [
+      "다른 행 수정",
+      "상태 변경"
+     ]
+    }
+   },
+   {
+    "key": "B",
+    "label": "기각",
+    "pros": "기획서 방향 유지",
+    "cons": "대안 기록 사라짐",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   }
+  ],
+  "recommend": {
+   "key": "A",
+   "why": "결정은 시뮬 실측 후. 지금은 선택지만 보존."
   },
-  {
-    "id": "AG-L007", "kind": "pick", "title": "감독 라이선스 팩 (BM 방향 변경)",
-    "bluf": "광고 제거+편의 묶음 상품은 확정 BM 방향을 바꾼다. 어디까지 후보로 둘지 결정.",
-    "context": "광고 없는 티켓 수령은 GDD §6.2와, 튜닝 머니 무료는 §7.3의 간접 전력 격차와 긴장. 월 결제는 §7.2 후순위.",
-    "options": [
-      {"key": "A", "label": "광고 제거만 후보로", "pros": "BM 방향 유지", "cons": "편의 상품 아이디어 보류", "cost": "S", "on_choose": "결정 로그에만 남김"},
-      {"key": "B", "label": "팩 전체를 후보로", "pros": "수익 아이디어 보존", "cons": "P2W·확정 방향과 충돌", "cost": "S", "on_choose": "결정 로그에만 남김"},
-      {"key": "C", "label": "기각", "pros": "단순", "cons": "광고 제거 수요 무시", "cost": "S", "on_choose": "결정 로그에만 남김"}
-    ],
-    "recommend": {"key": "A", "why": "확정 BM을 건드리지 않는 범위."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:18"], "blocks": ["O-204"], "urgency": "later", "risk": "med", "reversible": true
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:17"
+  ],
+  "blocks": [
+   "O-005",
+   "O-106"
+  ],
+  "urgency": "week",
+  "risk": "low",
+  "reversible": true
+ },
+ {
+  "id": "AG-L007",
+  "kind": "pick",
+  "title": "감독 라이선스 팩 (BM 방향 변경)",
+  "bluf": "광고 제거+편의 묶음 상품은 확정 BM 방향을 바꾼다. 어디까지 후보로 둘지 결정.",
+  "context": "광고 없는 티켓 수령은 GDD §6.2와, 튜닝 머니 무료는 §7.3의 간접 전력 격차와 긴장. 월 결제는 §7.2 후순위.",
+  "options": [
+   {
+    "key": "A",
+    "label": "광고 제거만 후보로",
+    "pros": "BM 방향 유지",
+    "cons": "편의 상품 아이디어 보류",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   },
+   {
+    "key": "B",
+    "label": "팩 전체를 후보로",
+    "pros": "수익 아이디어 보존",
+    "cons": "P2W, 확정 방향과 충돌",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   },
+   {
+    "key": "C",
+    "label": "기각",
+    "pros": "단순",
+    "cons": "광고 제거 수요 무시",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   }
+  ],
+  "recommend": {
+   "key": "A",
+   "why": "확정 BM을 건드리지 않는 범위."
   },
-  {
-    "id": "AG-L008", "kind": "pick", "title": "차량 Stage 진화 (CONFLICT)",
-    "bluf": "Stage별 튜닝 포인트 증가는 '튜닝 포인트 전원 동일'과 충돌. 개념만 남길지 결정.",
-    "context": "두 보고서의 % 구간도 서로 다름(20/45/70 vs 25/50/75).",
-    "options": [
-      {"key": "A", "label": "마일스톤 개념만 후보", "pros": "성장 체감 아이디어 보존", "cons": "세부 재설계 필요", "cost": "S", "on_choose": "결정 로그에만 남김"},
-      {"key": "B", "label": "기각", "pros": "기획서 유지", "cons": "아이디어 버림", "cost": "S", "on_choose": "결정 로그에만 남김"}
-    ],
-    "recommend": {"key": "A", "why": "충돌하는 튜닝 포인트 확장만 빼면 된다."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:19"], "blocks": ["O-101"], "urgency": "later", "risk": "low", "reversible": true
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:18"
+  ],
+  "blocks": [
+   "O-204"
+  ],
+  "urgency": "later",
+  "risk": "med",
+  "reversible": true
+ },
+ {
+  "id": "AG-L008",
+  "kind": "pick",
+  "title": "차량 Stage 진화 (CONFLICT)",
+  "bluf": "Stage별 튜닝 포인트 증가는 '튜닝 포인트 전원 동일'과 충돌. 개념만 남길지 결정.",
+  "context": "두 보고서의 % 구간도 서로 다름(20/45/70 vs 25/50/75).",
+  "options": [
+   {
+    "key": "A",
+    "label": "마일스톤 개념만 후보",
+    "pros": "성장 체감 아이디어 보존",
+    "cons": "세부 재설계 필요",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   },
+   {
+    "key": "B",
+    "label": "기각",
+    "pros": "기획서 유지",
+    "cons": "아이디어 버림",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   }
+  ],
+  "recommend": {
+   "key": "A",
+   "why": "충돌하는 튜닝 포인트 확장만 빼면 된다."
   },
-  {
-    "id": "AG-L009", "kind": "pick", "title": "외형 노출 쇼케이스 4종",
-    "bluf": "그리드 카드·컷인·시상대·순위표 외형 노출안을 검증 후보로 둘지 결정.",
-    "context": "시상대는 GDD에 이미 있음. 초상 컷인은 아트 비용이 든다.",
-    "options": [
-      {"key": "A", "label": "O-202 검증 후보로", "pros": "BM 검증 재료", "cons": "아트 비용 검토 필요", "cost": "S", "on_choose": "결정 로그에만 남김"},
-      {"key": "B", "label": "기각", "pros": "범위 축소", "cons": "외형 상품 노출 약해짐", "cost": "S", "on_choose": "결정 로그에만 남김"}
-    ],
-    "recommend": {"key": "A", "why": "외형 판매가 BM 핵심이라 노출 검증이 필요."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:20"], "blocks": ["O-202", "O-210"], "urgency": "later", "risk": "low", "reversible": true
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:19"
+  ],
+  "blocks": [
+   "O-101"
+  ],
+  "urgency": "later",
+  "risk": "low",
+  "reversible": true
+ },
+ {
+  "id": "AG-L009",
+  "kind": "pick",
+  "title": "외형 노출 쇼케이스 4종",
+  "bluf": "그리드 카드, 컷인, 시상대, 순위표 외형 노출안을 검증 후보로 둘지 결정.",
+  "context": "시상대는 GDD에 이미 있음. 초상 컷인은 아트 비용이 든다.",
+  "options": [
+   {
+    "key": "A",
+    "label": "O-202 검증 후보로",
+    "pros": "BM 검증 재료",
+    "cons": "아트 비용 검토 필요",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   },
+   {
+    "key": "B",
+    "label": "기각",
+    "pros": "범위 축소",
+    "cons": "외형 상품 노출 약해짐",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   }
+  ],
+  "recommend": {
+   "key": "A",
+   "why": "외형 판매가 BM 핵심이라 노출 검증이 필요."
   },
-  {
-    "id": "AG-L010", "kind": "pick", "title": "숙소·차고 꾸미기 제외 기록",
-    "bluf": "GDD에 남은 숙소·차고 꾸미기는 GAME_VISION이 배제. 제외 사실을 CHANGELOG에 남길지 결정.",
-    "context": "GAME_VISION '하지 않을 것': 시설 운영 타이쿤 금지. SSOT가 기획서보다 우선.",
-    "options": [
-      {"key": "A", "label": "CHANGELOG에 기록", "pros": "혼선 방지", "cons": "작업 1건", "cost": "S", "on_choose": "CHANGELOG 기록 작업 카드",
-       "task": {"goal": "design_ssot/CHANGELOG.md에 '숙소·차고 꾸미기는 GAME_VISION에 따라 제외(GDD §2·§7.2 잔존)' 한 줄을 오늘 날짜로 추가한다.", "allowed_paths": ["design_ssot/CHANGELOG.md"], "spec_refs": ["GAME_VISION.md", "design_ssot/CHANGELOG.md"], "acceptance": ["한 항목만 추가", "기존 항목 수정 없음"], "forbidden": ["다른 파일 수정"]}},
-      {"key": "B", "label": "GDD대로 유지 검토", "pros": "꾸미기 수익 여지", "cons": "타이쿤 금지와 충돌", "cost": "S", "on_choose": "결정 로그에만 남김"}
-    ],
-    "recommend": {"key": "A", "why": "이미 정한 방향의 기록 정리."},
-    "evidence": ["reports/AGENDA_2026-11-01.md:21"], "urgency": "later", "risk": "low", "reversible": true
-  }
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:20"
+  ],
+  "blocks": [
+   "O-202",
+   "O-210"
+  ],
+  "urgency": "later",
+  "risk": "low",
+  "reversible": true
+ },
+ {
+  "id": "AG-L010",
+  "kind": "pick",
+  "title": "숙소, 차고 꾸미기 제외 기록",
+  "bluf": "GDD에 남은 숙소, 차고 꾸미기는 GAME_VISION이 배제. 제외 사실을 CHANGELOG에 남길지 결정.",
+  "context": "GAME_VISION '하지 않을 것': 시설 운영 타이쿤 금지. SSOT가 기획서보다 우선.",
+  "options": [
+   {
+    "key": "A",
+    "label": "CHANGELOG에 기록",
+    "pros": "혼선 방지",
+    "cons": "작업 1건",
+    "cost": "S",
+    "on_choose": "CHANGELOG 기록 작업 카드",
+    "task": {
+     "goal": "design_ssot/CHANGELOG.md에 '숙소, 차고 꾸미기는 GAME_VISION에 따라 제외(GDD §2, §7.2 잔존)' 한 줄을 오늘 날짜로 추가한다.",
+     "allowed_paths": [
+      "design_ssot/CHANGELOG.md"
+     ],
+     "spec_refs": [
+      "GAME_VISION.md",
+      "design_ssot/CHANGELOG.md"
+     ],
+     "acceptance": [
+      "한 항목만 추가",
+      "기존 항목 수정 없음"
+     ],
+     "forbidden": [
+      "다른 파일 수정"
+     ]
+    }
+   },
+   {
+    "key": "B",
+    "label": "GDD대로 유지 검토",
+    "pros": "꾸미기 수익 여지",
+    "cons": "타이쿤 금지와 충돌",
+    "cost": "S",
+    "on_choose": "결정 로그에만 남김"
+   }
+  ],
+  "recommend": {
+   "key": "A",
+   "why": "이미 정한 방향의 기록 정리."
+  },
+  "evidence": [
+   "reports/AGENDA_2026-11-01.md:21"
+  ],
+  "urgency": "later",
+  "risk": "low",
+  "reversible": true
+ }
 ]

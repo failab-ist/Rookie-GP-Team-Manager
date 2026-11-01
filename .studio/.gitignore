@@ -2,3 +2,5 @@
 runs/
 chat/
 engine/
+# 옵시디언 개인 설정(창 배치 등)은 올리지 않는다. 노트 자체는 올린다.
+notes/.obsidian/
