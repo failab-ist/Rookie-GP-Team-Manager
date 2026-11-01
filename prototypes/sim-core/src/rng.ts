@@ -23,3 +23,14 @@ export function shuffle<T>(rng: Rng, items: readonly T[]): T[] {
   }
   return out;
 }
+
+// (시드, 슬롯, 판정 종류)별 하위 스트림 (INT §3.7 R7-1). 섞는 방법은 가안 (O-001, INT Q-59)
+const STREAM_KINDS = { grid: 1, react: 2, try: 3, win: 4, eps: 5, pass: 6 } as const;
+export type StreamKind = keyof typeof STREAM_KINDS;
+
+export function subStream(seed: number, slot: number, kind: StreamKind): Rng {
+  let h = seed >>> 0;
+  h = Math.imul(h ^ (h >>> 16) ^ Math.imul(slot + 1, 0x9e3779b1), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13) ^ Math.imul(STREAM_KINDS[kind], 0xc2b2ae35), 0x27d4eb2f);
+  return createRng((h ^ (h >>> 16)) >>> 0);
+}

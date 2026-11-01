@@ -1,5 +1,5 @@
 // 차량 4능력치 주행 물리 (CAR_STATS_TRACKS_PROTO_DRAFT.md §3, §7). 화면 · node: 모듈 없음.
-import { A0, B0, CAR_STAT_MAX, G0, KA, KB, KG, KV, P_APEX, SUBSTEPS, TICK_SECONDS, V0 } from './config.ts';
+import { A0, AC1_A0, AC1_KA, ACCEL_FORMULA, B0, CAR_STAT_MAX, G0, KA, KB, KG, KV, P_APEX, SUBSTEPS, TICK_SECONDS, V0 } from './config.ts';
 import type { CarStats, TrackSegment } from './types.ts';
 
 export type CarParams = {
@@ -9,11 +9,12 @@ export type CarParams = {
   aBrk: number; // F5a 진입 감속도
 };
 
-export function carParams(s: CarStats): CarParams {
+// formula: 가속 공식 스위치 (current = CAR F3a, AC1 = INT §4.7 비교용)
+export function carParams(s: CarStats, formula: 'current' | 'AC1' = ACCEL_FORMULA): CarParams {
   const n = (v: number) => v / CAR_STAT_MAX; // F1
   return {
     vTop: V0 * (1 + KV * n(s.topSpeed)),
-    A: A0 * (1 + KA * n(s.accel)),
+    A: formula === 'AC1' ? AC1_A0 * (1 + AC1_KA * n(s.accel)) : A0 * (1 + KA * n(s.accel)),
     vg: G0 * (1 + KG * n(s.grip)),
     aBrk: B0 * (1 + KB * n(s.brake)),
   };
@@ -79,13 +80,22 @@ export const DT = TICK_SECONDS / SUBSTEPS;
 
 // 한 물리 스텝 뒤 속도. 가속은 직선과 정점 뒤에서만 (F3, F7). 감속은 envelope가 만든다 (제동은 코너 전, AG-P017).
 // holdOnStraight: QA 장면에서 직선 시작 속도를 고정할 때 (CAR §12.1 접지 시험 정합화)
-export function step(c: Course, p: CarParams, k: number, x: number, v: number, holdOnStraight = false): number {
+// extra.cap: 차끼리 막힘 상한 (INT §4.2), extra.noAccel: 출발 반응 지연 중 (INT §4.5)
+export function step(
+  c: Course,
+  p: CarParams,
+  k: number,
+  x: number,
+  v: number,
+  holdOnStraight = false,
+  extra?: { cap?: number; noAccel?: boolean },
+): number {
   const s = segAt(c, x);
-  const accel = s.kind === 'straight' ? !holdOnStraight : wrap(c, x) >= s.apex;
+  const accel = !extra?.noAccel && (s.kind === 'straight' ? !holdOnStraight : wrap(c, x) >= s.apex);
   const xn = x + v * DT;
   const vn = accel ? v + p.A * DT : v;
   // 스텝 시작점과 끝점의 한계를 모두 지킨다 (구간 경계에서 한 스텝 넘치는 것 방지)
-  return Math.min(vn, p.vTop, limitAt(c, p, k, x), limitAt(c, p, k, xn), envelopeAt(c, p, xn));
+  return Math.min(vn, p.vTop, limitAt(c, p, k, x), limitAt(c, p, k, xn), envelopeAt(c, p, xn), extra?.cap ?? Infinity);
 }
 
 export type Trace = { x: number[]; v: number[]; t: number[] };

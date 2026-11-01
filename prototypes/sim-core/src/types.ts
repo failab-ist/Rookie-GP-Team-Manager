@@ -37,6 +37,7 @@ export type TrackSegment = {
   bend: number; // 휘는 정도. 0에 가까울수록 직선
   width: number;
   passable: boolean; // 추월 가능 표시
+  innerLane?: number; // 코너 안쪽 차선. 코너 방향 데이터가 없어 비워 두면 config DEFAULT_INNER_LANE (가안)
 };
 
 export type Track = {
@@ -57,7 +58,7 @@ export type RaceInput = {
   entries: Entry[];
 };
 
-// 사건 종류 번호 = 정렬 번호 (RACE_DIRECTING_P0_DRAFT.md:131). passiveDrawback은 목록에 없어 가안 10 (O-004).
+// 사건 종류 번호 = 정렬 번호 (RACE_DIRECTING_P0_DRAFT.md:131). 반대급부는 종류 5의 원인 코드로 구분 (INT Q-57 (b), 지시서 가안)
 export const EventKind = {
   start: 1,
   rankChange: 2,
@@ -68,7 +69,6 @@ export const EventKind = {
   lap: 7,
   lastLap: 8,
   finish: 9,
-  passiveDrawback: 10,
 } as const;
 export type EventKindId = (typeof EventKind)[keyof typeof EventKind];
 
@@ -80,8 +80,42 @@ export type RaceEvent = {
   leadCar: number; // 대표 차 번호 = cars 중 가장 작은 번호
   rank: [before: number, after: number] | null; // 순위는 1부터
   lap: number; // 1부터
-  segment: number; // 트랙 구간 번호
-  cause: string | null; // 원인 코드. 패시브 원인 값은 O-004 미정
+  segment: string; // 트랙 구간 id (CAR §4.1 문자열, INT Q-59 가안)
+  cause: string | null; // 원인 코드. 추월 S1, 접촉 rear/side, 패시브 activate:<id> · 반대급부 T-A/T-B-inner/T-B-straight/T-C (INT Q-57 (b))
+};
+
+// 판정 기록: 사건 기록과 따로 둔다 (INT §6.2). 형식과 정렬은 사건 기록과 같다
+export const JudgementKind = {
+  overtakeTry: 1,
+  overtakeFail: 2, // 구간 끝까지 S1 성공 못 함
+  overtakeAbort: 3, // 목표 차선 창에 차가 들어와 되돌림
+  contactRelease: 4,
+  passiveGrace: 5, // 출발 유예 중 조건 성립 (RACER §6)
+  passiveCooldownHit: 6, // 쿨다운 중 조건 성립 (RACER §4)
+} as const;
+export type Judgement = Omit<RaceEvent, 'kind'> & { kind: (typeof JudgementKind)[keyof typeof JudgementKind] };
+
+// 차별 집계 (QA용)
+export type CarStatsLog = {
+  tries: number;
+  successes: number;
+  fails: number;
+  contacts: number;
+  blockedTicks: number;
+  racingTicks: number;
+  laneTicks: number[];
+  mistakes: number;
+  passiveActivations: number;
+  drawbacks: Record<string, number>;
+  solver: { opportunities: number; forfeits: number; successesActive: number; successesInactive: number };
+};
+
+export type RaceOptions = {
+  k: number; // 정점 뒤 한계 풀림 (AG-P024 B)
+  interaction: boolean; // false = 2단계와 같은 단독 주행 10대
+  reaction: boolean; // R1 출발 반응 지연 (INT Q-52)
+  slipstream: boolean; // SS-1 (INT Q-53)
+  accelFormula: 'current' | 'AC1'; // INT §4.7
 };
 
 export type RaceHeader = {
@@ -90,6 +124,7 @@ export type RaceHeader = {
   trackId: string;
   tickSeconds: number;
   exitLimitRelax: number; // 정점 뒤 한계 풀림 계수 k (AG-P024 B)
+  options: RaceOptions;
 };
 
 export type RaceResult = {
@@ -98,6 +133,9 @@ export type RaceResult = {
   ticks: number; // 마지막 차 완주까지 틱 수
   seconds: number; // ticks × tickSeconds
   frames: number[][]; // [틱][차 번호] = 누적 주행 거리
+  lateral: number[][]; // [틱][차 번호] = 횡 위치 y (u). 단독 주행 모드는 빈 배열
   events: RaceEvent[];
+  judgements: Judgement[];
+  carStats: CarStatsLog[];
   finishOrder: number[]; // 최종 순위대로 차 번호
 };

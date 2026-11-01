@@ -46,15 +46,14 @@ test('잘못된 입력은 거부한다', () => {
   assert.throws(() => simulate(input({ seed: -1 })), /seed/);
 });
 
-test('순위 비교: 차 1이 차 0을 앞지르면 순위 변화 2건, 추월 1건, 선두 변경 1건', () => {
-  const where = () => ({ lap: 1, segment: 0 });
+test('순위 비교: 차 1이 차 0을 앞지르면 순위 변화 2건, 선두 변경 1건 (추월 사건은 S1 성공에서만)', () => {
+  const where = () => ({ lap: 1, segment: 'x' });
   const events = diffOrder(10, [0, 1, 2], [1, 0, 2], where);
   assert.deepEqual(
     events.map((e) => [e.kind, e.cars, e.rank, e.cause]),
     [
       [EventKind.rankChange, [1], [2, 1], null],
       [EventKind.rankChange, [0], [1, 2], null],
-      [EventKind.overtake, [0, 1], [2, 1], 'by:1'],
       [EventKind.leadChange, [0, 1], null, 'by:1'],
     ],
   );
@@ -62,7 +61,7 @@ test('순위 비교: 차 1이 차 0을 앞지르면 순위 변화 2건, 추월 1
 });
 
 test('사건 정렬과 중복 제거: 모든 필드가 같을 때만 합친다', () => {
-  const at = { lap: 1, segment: 0 };
+  const at = { lap: 1, segment: 'x' };
   const a = makeEvent(5, EventKind.contact, [2, 5], at);
   const b = makeEvent(5, EventKind.contact, [2, 7], at);
   const early = makeEvent(1, EventKind.lap, [9], at);
