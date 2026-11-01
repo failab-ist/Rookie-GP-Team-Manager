@@ -90,5 +90,7 @@ SPEC_INDEX → 해당 owner 문서 → 필요한 부분만 읽기
 # 9. 이 저장소에서 일하는 AI 직원
 
 이 저장소의 작업은 AI 개발팀 오케스트레이터(`failab-ist/ai-dev-orchestrator`)가 나눠 맡긴다. 감독(USER)은 단톡방 `#agenda`의 카드 버튼으로만 결정한다.
+- 실행: 저장소 루트의 `start_studio.cmd` 더블클릭. 엔진은 `.studio/engine`에 받아 두며 GitHub에 올리지 않는다(`.studio/.gitignore`). 스튜디오 설정 · 안건 · 결정 기록(`.studio/studio.json` · `agenda/` · `decisions.jsonl`)은 커밋한다.
+- 결과를 재현해야 하는 코드(레이스 시뮬레이터)에는 `Math.random` · `Date.now` · 렌더러(Phaser · React) import를 쓰지 않는다. 시드 난수만 쓴다(`design_ssot/TECH_STACK.md` 시뮬레이터 경계).
 - 직원은 지시받은 허용 경로만 고친다. 다른 직원을 부르거나 결정을 대신하지 않는다.
 - 검수자는 고치지 않고 판정(JSON)만 한다. 근거 없는 반려는 무효다.
