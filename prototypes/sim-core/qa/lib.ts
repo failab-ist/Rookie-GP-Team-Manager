@@ -84,6 +84,12 @@ export function lapGains(tracks: Track[], formula: 'current' | 'AC1' = 'current'
 
 // ---------- 10대 레이스 (테스트 차 1대 + F-2 상대 9대, INT §9.2) ----------
 
+// 사건 구간 id → 직선/코너 (OT-4 원인, 접촉 위치 분류)
+const segKinds = new Map<string, string>();
+const segKind = (trackId: string, id: string) => segKinds.get(`${trackId}|${id}`) ?? '?';
+export const registerTrack = (t: Track) => t.segments.forEach((sg) => segKinds.set(`${t.id}|${sg.id}`, sg.kind === 'corner' ? '코너' : '직선'));
+TRACKS.forEach(registerTrack);
+
 export const NPC = { overtake: 5, control: 5, focus: 5 }; // 상대 레이서 고정 프로필 (RACER_STATS_PASSIVES_DRAFT.md:269 가안, 패시브 없음)
 const toStats = (a: number[]): CarStats => ({ topSpeed: a[0], accel: a[1], grip: a[2], brake: a[3] });
 const opponents = (): Entry[] =>
@@ -95,11 +101,30 @@ export const testCar = (stats: CarStats, racer: Entry['racer'] = { id: 'test', s
   car: { id: 'test', stats },
 });
 
-export type RaceSummary = { rank: number; blockRatio: number; overtakes: number; tries: number; aborts: number; contacts: number; ticks: number; overtakeSegs: string[] };
+// overtakes = 추월 사건(종류 3) 수. OT-4 이후 종류 3은 '앞뒤가 바뀌어 1초 유지'된 기록이고, 정식 시도 S1 성공은 s1에 따로 센다
+export type RaceSummary = {
+  rank: number;
+  blockRatio: number;
+  overtakes: number;
+  overtakesS1: number;
+  s1: number;
+  tries: number;
+  aborts: number;
+  contacts: number;
+  contactKinds: Record<string, number>;
+  passCauses: Record<string, number>;
+  ticks: number;
+  overtakeSegs: string[];
+};
+const countBy = (keys: string[]) => keys.reduce<Record<string, number>>((a, k) => ((a[k] = (a[k] ?? 0) + 1), a), {});
 export const summarize = (r: ReturnType<typeof simulate>): RaceSummary => ({
   rank: r.finishOrder.indexOf(0) + 1,
   blockRatio: r.carStats.reduce((a, c) => a + c.blockedTicks, 0) / r.carStats.reduce((a, c) => a + c.racingTicks, 0),
-  overtakes: r.carStats.reduce((a, c) => a + c.successes, 0),
+  overtakes: r.events.filter((e) => e.kind === 3).length,
+  overtakesS1: r.events.filter((e) => e.kind === 3 && e.cause?.includes(':S1:')).length,
+  s1: r.carStats.reduce((a, c) => a + c.successes, 0),
+  passCauses: countBy(r.events.filter((e) => e.kind === 3).map((e) => e.cause!.split(':')[0])),
+  contactKinds: countBy(r.events.filter((e) => e.kind === 4).map((e) => `${e.cause}:${segKind(r.header.trackId, e.segment)}`)),
   tries: r.carStats.reduce((a, c) => a + c.tries, 0),
   aborts: r.judgements.filter((j) => j.kind === 3).length, // 목표 차선 창에 차가 들어와 되돌아옴
   contacts: r.carStats.reduce((a, c) => a + c.contacts, 0) / 2,
