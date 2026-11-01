@@ -1,36 +1,40 @@
 {
-  "_note": "시험용 입력. 트랙은 프로토 트랙 3종이 아니고 구간 수치 근거 없음. 차량 능력치는 AG-P020 초안 전 자리표시이며 주행에 반영되지 않음. 레이서 A 7/4/4는 RACER_STATS_PASSIVES_DRAFT.md:80, NPC 5/5/5는 같은 문서 :269 (모두 가안)",
+  "_note": "시험용 입력. 트랙은 프로토 트랙 3종이 아닌 임시 타원이고 구간 수치 근거 없음(코너 bend는 코너 검사 (a)를 통과하도록 0.5 → 0.7, 폭은 CAR §5 공통값 12). 차량은 모두 기준 차 5/5/5/5 (CAR §4.2). 레이서 A 7/4/4는 RACER_STATS_PASSIVES_DRAFT.md:80, NPC 5/5/5는 같은 문서 :269 (모두 가안)",
   "seed": 42,
   "laps": 3,
   "track": {
     "id": "test-oval",
     "segments": [
       {
+        "id": "oval-01",
         "kind": "straight",
         "length": 400,
         "bend": 0,
-        "width": 3,
+        "width": 12,
         "passable": true
       },
       {
+        "id": "oval-02",
         "kind": "corner",
         "length": 150,
-        "bend": 0.5,
-        "width": 3,
+        "bend": 0.7,
+        "width": 12,
         "passable": false
       },
       {
+        "id": "oval-03",
         "kind": "straight",
         "length": 300,
         "bend": 0,
-        "width": 3,
+        "width": 12,
         "passable": true
       },
       {
+        "id": "oval-04",
         "kind": "corner",
         "length": 150,
-        "bend": 0.5,
-        "width": 3,
+        "bend": 0.7,
+        "width": 12,
         "passable": false
       }
     ]

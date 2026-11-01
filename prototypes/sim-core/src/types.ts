@@ -14,7 +14,7 @@ export type Racer = {
 };
 
 // 차량 4능력치 (SPEC_INDEX.md:37). 제동 = 코너 진입 전 감속, 접지 = 코너 안 한계 속도 (AG-P017 A).
-// 주행에 주는 영향은 O-002 / AG-P020 초안 뒤에 넣는다.
+// 주행 공식은 src/physics.ts (CAR_STATS_TRACKS_PROTO_DRAFT.md §7, 가안).
 export type CarStats = {
   topSpeed: number; // 최고속도
   accel: number; // 가속
@@ -29,8 +29,9 @@ export type Car = {
 
 export type SegmentKind = 'straight' | 'corner';
 
-// 트랙 구간. 길이 단위는 시뮬 거리 단위(미정, O-001).
+// 트랙 구간 (CAR_STATS_TRACKS_PROTO_DRAFT.md §4.1). 길이 단위 u는 가안.
 export type TrackSegment = {
+  id: string; // 랩 안의 순서대로. 예: T1-01
   kind: SegmentKind;
   length: number;
   bend: number; // 휘는 정도. 0에 가까울수록 직선
@@ -88,6 +89,7 @@ export type RaceHeader = {
   inputHash: string;
   trackId: string;
   tickSeconds: number;
+  exitLimitRelax: number; // 정점 뒤 한계 풀림 계수 k (AG-P024 B)
 };
 
 export type RaceResult = {

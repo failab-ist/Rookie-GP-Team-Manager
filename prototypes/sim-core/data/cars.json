@@ -1,0 +1,8 @@
+{
+  "_note": "프로토 시험값, 확정 규칙 아님 (AG-P018 A, CAR_STATS_TRACKS_PROTO_DRAFT.md §6, O-002 결정 전). 합계 20 가안. 이름은 Q-32",
+  "cars": [
+    { "id": "X", "stats": { "topSpeed": 7, "accel": 5, "grip": 4, "brake": 4 } },
+    { "id": "Y", "stats": { "topSpeed": 4, "accel": 4, "grip": 6, "brake": 6 } },
+    { "id": "base", "stats": { "topSpeed": 5, "accel": 5, "grip": 5, "brake": 5 } }
+  ]
+}

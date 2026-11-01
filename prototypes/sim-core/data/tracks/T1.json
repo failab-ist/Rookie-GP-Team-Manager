@@ -1,0 +1,14 @@
+{
+  "_note": "CAR_STATS_TRACKS_PROTO_DRAFT.md §5 구간 표 그대로 (가안). 이름 고속/기술/복합은 CONFLICT Q-33이라 T1/T2/T3을 쓴다",
+  "id": "T1",
+  "segments": [
+    {"id":"T1-01","kind":"straight","length":150,"bend":0,"width":12,"passable":true},
+    {"id":"T1-02","kind":"corner","length":100,"bend":0.7,"width":12,"passable":false},
+    {"id":"T1-03","kind":"straight","length":150,"bend":0,"width":12,"passable":true},
+    {"id":"T1-04","kind":"corner","length":100,"bend":0.9,"width":12,"passable":false},
+    {"id":"T1-05","kind":"straight","length":150,"bend":0,"width":12,"passable":true},
+    {"id":"T1-06","kind":"corner","length":100,"bend":0.75,"width":12,"passable":false},
+    {"id":"T1-07","kind":"straight","length":150,"bend":0,"width":12,"passable":true},
+    {"id":"T1-08","kind":"corner","length":100,"bend":0.78,"width":12,"passable":false}
+  ]
+}
