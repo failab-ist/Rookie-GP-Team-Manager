@@ -116,6 +116,9 @@ export type RaceOptions = {
   reaction: boolean; // R1 출발 반응 지연 (INT Q-52)
   slipstream: boolean; // SS-1 (INT Q-53)
   accelFormula: 'current' | 'AC1'; // INT §4.7
+  latSpeed: number; // 차선 변경 횡 속도 v_lat u/s (INT §4.1)
+  // 추월 시도 조건의 '원하는 속도' (INT R3-1, 초안에 정의 없음). step = 다음 물리 스텝 속도(3단계 구현), target = 막히지 않았을 때의 한계 속도
+  desiredSpeed: 'step' | 'target';
 };
 
 export type RaceHeader = {

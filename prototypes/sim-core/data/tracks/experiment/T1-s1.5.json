@@ -1,0 +1,14 @@
+{
+  "_note": "실험용 (직선 길이 ×1.5, 코너는 그대로). 원본 data/tracks/T1.json. 설계 트랙 아님",
+  "id": "T1-s1.5",
+  "segments": [
+    {"id":"T1-01","kind":"straight","length":225,"bend":0,"width":12,"passable":true},
+    {"id":"T1-02","kind":"corner","length":100,"bend":0.7,"width":12,"passable":false},
+    {"id":"T1-03","kind":"straight","length":225,"bend":0,"width":12,"passable":true},
+    {"id":"T1-04","kind":"corner","length":100,"bend":0.9,"width":12,"passable":false},
+    {"id":"T1-05","kind":"straight","length":225,"bend":0,"width":12,"passable":true},
+    {"id":"T1-06","kind":"corner","length":100,"bend":0.75,"width":12,"passable":false},
+    {"id":"T1-07","kind":"straight","length":225,"bend":0,"width":12,"passable":true},
+    {"id":"T1-08","kind":"corner","length":100,"bend":0.78,"width":12,"passable":false}
+  ]
+}

@@ -2,7 +2,7 @@
 // INT = design_ssot/drafts/RACE_INTERACTION_P0_DRAFT.md (차선, 막힘, 추월, 접촉, 출발, 슬립스트림, 능력치 · 패시브 연결)
 import * as C from './config.ts';
 import { diffOrder, makeEvent, sortEvents } from './events.ts';
-import { buildCourse, carParams, DT, segAt, step, type CarParams } from './physics.ts';
+import { buildCourse, carParams, DT, envelopeAt, limitAt, segAt, step, type CarParams } from './physics.ts';
 import { isPassive, lateralErr, pFocus, pTry, type PassiveId } from './racer.ts';
 import { createRng, shuffle, subStream, type Rng } from './rng.ts';
 import { checkTrack } from './trackCheck.ts';
@@ -24,6 +24,8 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   reaction: C.DEFAULT_REACTION,
   slipstream: C.DEFAULT_SLIPSTREAM,
   accelFormula: C.ACCEL_FORMULA,
+  latSpeed: C.LAT_SPEED,
+  desiredSpeed: C.DESIRED_SPEED,
 };
 
 // 막힘 상한 v_cap (INT §4.2). gap = 같은 차선 앞뒤 간격 g
@@ -63,6 +65,7 @@ type Car = {
 export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): RaceResult {
   const o: RaceOptions = { ...DEFAULT_OPTIONS, ...opts };
   validate(input, o.k);
+  if (!(o.latSpeed > 0)) throw new Error('횡 속도 v_lat은 0보다 커야 한다 (INT §4.1)');
   const { seed, track, laps, entries } = input;
   const course = buildCourse(track.segments, true);
   const L = course.length;
@@ -211,7 +214,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
       for (const c of act) {
         if (!changing(c)) continue;
         if (c.dir === 1 && !c.ignoreWindow && windowBusy(c, c.to)) revert(c);
-        const vLat = C.LAT_SPEED * (c.passive === 'gap-hunter' && c.ps.state === 'active' ? C.GAP_HUNTER_LAT_MUL : 1);
+        const vLat = o.latSpeed * (c.passive === 'gap-hunter' && c.ps.state === 'active' ? C.GAP_HUNTER_LAT_MUL : 1);
         c.prog += (c.dir * vLat * C.TICK_SECONDS) / C.LANE_WIDTH;
         if (c.prog >= 1) c.from = c.to;
         if (c.prog <= 0) c.to = c.from;
@@ -262,7 +265,9 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
         const f = frontOf(c);
         if (!seg.passable || !f || !shareLane(c, f)) continue;
         const g = gapTo(c, f);
-        if (g > C.TRY_GAP || desired.get(c)! - f.v < C.TRY_DV_MIN) continue;
+        const p = effParams(c);
+        const want = o.desiredSpeed === 'target' ? Math.min(p.vTop, limitAt(course, p, o.k, c.s), envelopeAt(course, p, c.s)) : desired.get(c)!;
+        if (g > C.TRY_GAP || want - f.v < C.TRY_DV_MIN) continue;
         // 코너 설계자 반대급부: 발동 끝 4 s 안 직선에서 시도 안 함 (T-B 직선 미시도)
         if (c.passive === 'corner-architect' && t - c.ps.lastEnd <= C.ARCHITECT_NO_TRY_SECONDS && g <= C.ARCHITECT_NO_TRY_GAP) {
           passiveEvent(c, 'T-B-straight');

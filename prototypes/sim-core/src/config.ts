@@ -54,7 +54,7 @@ export const AC1_KA = 1.33; // 가안, INT §4.7 AC-1
 export const KAPPA_PX_PER_U = 2; // 가안, 근거 없음. RACER px → u 환산 (INT Q-47)
 export const LANE_COUNT = 3; // 가안, INT §3.1 L-A (Q-48)
 export const LANE_WIDTH = 4; // 가안, INT §4.1 W_lane (Q-48)
-export const LAT_SPEED = 4; // 가안, INT §4.1 v_lat u/s
+export const LAT_SPEED = 4; // 가안, INT §4.1 v_lat u/s (기본값. 실험은 simulate 옵션 latSpeed로 바꾼다, 초안 범위 2~6)
 export const WINDOW_FRONT = 12; // 가안, INT §4.1 W_f u
 export const WINDOW_BACK = 8; // 가안, INT §4.1 W_b u
 export const CAR_LENGTH = 6; // 가안, INT §4.2 L_car u
@@ -78,6 +78,8 @@ export const SLIP_GAP = 10; // 가안, INT §4.6 g_ss u (SS-1일 때만, Q-53)
 export const SLIP_RATIO = 0.03; // 가안, INT §4.6 s_ss
 export const DEFAULT_REACTION = false; // 가안, R0 (INT Q-52 추천 없음)
 export const DEFAULT_SLIPSTREAM = true; // 가안, SS-1 (INT Q-53 추천)
+// 추월 시도 조건의 '원하는 속도' 해석 (INT R3-1에 정의 없음, UNRESOLVED). 기본은 3단계와 같은 step
+export const DESIRED_SPEED: 'step' | 'target' = 'step';
 export const DEFAULT_INNER_LANE = 0; // 가안, 근거 없음. 코너 방향 데이터가 없어 모든 코너 안쪽 = 0번 (디렉터 2026-11-02)
 
 // 레이서 능력치 S-A 판단형 (AG-P027 A, RACER F2 · F3 · F4, INT §6.1)

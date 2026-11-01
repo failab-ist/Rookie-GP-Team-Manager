@@ -1,11 +1,8 @@
-// 자동 QA (CAR_STATS_TRACKS_PROTO_DRAFT.md §12). 마크다운 표를 stdout으로 낸다.
+// 자동 QA (CAR_STATS_TRACKS_PROTO_DRAFT.md §12, RACE_INTERACTION_P0_DRAFT.md §9.2). 마크다운 표를 stdout으로 낸다.
 // node qa/run.ts [handcalc|layer1|layer2|racers|accel|length|all]
 // 확인용 시드는 2층 판정에만 쓴다. 확인용 결과로 계수를 고치지 않는다. 2단계 k 비교 결과는 qa/results/2026-11-02.md
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import {
   ACCEL_R_RANGE,
-  BASE_CAR_STAT,
   EXIT_LIMIT_RELAX,
   L2_OPPONENTS,
   L2_SATURATION_MEAN,
@@ -23,55 +20,33 @@ import {
   TICK_SECONDS,
 } from '../src/config.ts';
 import { at, buildCourse, carParams, runSolo, type CarParams, type Trace } from '../src/physics.ts';
-import { simulate } from '../src/sim.ts';
 import { checkTrack } from '../src/trackCheck.ts';
-import type { CarStats, Entry, Track, TrackSegment } from '../src/types.ts';
+import type { CarStats, Track, TrackSegment } from '../src/types.ts';
+import {
+  BASE,
+  CARS,
+  EPS,
+  f,
+  lapGains,
+  layer2,
+  listHash,
+  load,
+  mean,
+  measureLap,
+  origRun,
+  out,
+  pct,
+  race,
+  RACERS,
+  STAT_KO,
+  STATS,
+  table,
+  testCar,
+  TRACKS,
+  type Measured,
+} from './lib.ts';
 
-const load = (p: string) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
-const TRACKS: Track[] = ['T1', 'T2', 'T3'].map((t) => load(`../data/tracks/${t}.json`));
-const CARS: { id: string; stats: CarStats }[] = load('../data/cars.json').cars;
 const HAND = load('./handcalc.json');
-const STATS: (keyof CarStats)[] = ['topSpeed', 'accel', 'grip', 'brake'];
-const STAT_KO: Record<keyof CarStats, string> = { topSpeed: '최고속도', accel: '가속력', grip: '접지력', brake: '제동력' };
-const BASE: CarStats = { topSpeed: BASE_CAR_STAT, accel: BASE_CAR_STAT, grip: BASE_CAR_STAT, brake: BASE_CAR_STAT };
-const EPS = 1e-6;
-
-const f = (v: number | null | undefined, d = 1) => (v === null || v === undefined || Number.isNaN(v) ? '–' : v.toFixed(d));
-const pct = (v: number | null) => (v === null ? '해당 없음' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(2)}%`);
-const table = (head: string[], rows: (string | number)[][]) =>
-  [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`, ...rows.map((r) => `| ${r.join(' | ')} |`)].join('\n');
-const out = (s = '') => process.stdout.write(s + '\n');
-
-// ---------- 기준 차 단독 2랩 실측 (M-16) ----------
-
-type Measured = {
-  corners: Map<string, { vEntry: number; vApex: number; vExit: number; vMax: number }>;
-  straights: Map<string, { vStart: number; vS: number; D: number; reachTop: boolean }>;
-  lapTime: number;
-};
-
-function measureLap(track: Track, p: CarParams, k: number): Measured {
-  const c = buildCourse(track.segments, true);
-  const L = c.length;
-  const tr = runSolo(c, p, k, { x0: 0, v0: 0, xEnd: 2 * L + 1 });
-  const corners: Measured['corners'] = new Map();
-  const straights: Measured['straights'] = new Map();
-  for (const s of c.segs) {
-    const idx = tr.x.map((x, i) => i).filter((i) => tr.x[i] >= L + s.start && tr.x[i] < L + s.end);
-    const vMax = Math.max(...idx.map((i) => tr.v[i]));
-    if (s.kind === 'corner') {
-      corners.set(s.id, { vEntry: at(tr, L + s.start, 'v'), vApex: at(tr, L + s.apex, 'v'), vExit: at(tr, L + s.end, 'v'), vMax });
-    } else {
-      // 제동 시작점 = 최고 속도의 마지막 지점. 그 뒤로 속도가 줄어야 제동으로 본다
-      let iMax = idx[0];
-      for (const i of idx) if (tr.v[i] >= vMax - EPS) iMax = i;
-      const braked = tr.v[idx[idx.length - 1]] < vMax - EPS;
-      const D = braked ? L + s.end - tr.x[iMax] : 0;
-      straights.set(s.id, { vStart: at(tr, L + s.start, 'v'), vS: vMax, D, reachTop: vMax >= p.vTop - EPS });
-    }
-  }
-  return { corners, straights, lapTime: at(tr, 2 * L, 't') - at(tr, L, 't') };
-}
 
 const nextOf = (track: Track, id: string) => {
   const i = track.segments.findIndex((s) => s.id === id);
@@ -257,75 +232,6 @@ const COMBOS: Combo[] = [
   { reaction: true, slipstream: true },
 ];
 const comboName = (c: Combo) => `${c.reaction ? 'R1' : 'R0'} · ${c.slipstream ? 'SS-1' : 'SS-0'}`;
-const NPC = { overtake: 5, control: 5, focus: 5 }; // 상대 레이서 고정 프로필 (RACER_STATS_PASSIVES_DRAFT.md:269 가안, 패시브 없음)
-const toStats = (a: number[]): CarStats => ({ topSpeed: a[0], accel: a[1], grip: a[2], brake: a[3] });
-const opponents = (): Entry[] =>
-  L2_OPPONENTS.map((o, i) => ({ racer: { id: `npc-${i + 1}`, stats: NPC, passiveId: null }, car: { id: `O${i + 1}`, stats: toStats(o) } }));
-const race = (track: Track, seed: number, test: Entry, combo: Combo) =>
-  simulate({ seed, track, laps: 3, entries: [test, ...opponents()] }, { ...combo, k: EXIT_LIMIT_RELAX });
-const testCar = (stats: CarStats, racer: Entry['racer'] = { id: 'test', stats: NPC, passiveId: null }): Entry => ({
-  racer,
-  car: { id: 'test', stats },
-});
-const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
-const sd = (a: number[]) => Math.sqrt(mean(a.map((x) => (x - mean(a)) ** 2)));
-
-type RaceSummary = { rank: number; blockRatio: number; overtakes: number; contacts: number; ticks: number };
-const summarize = (r: ReturnType<typeof simulate>): RaceSummary => ({
-  rank: r.finishOrder.indexOf(0) + 1,
-  blockRatio: r.carStats.reduce((a, c) => a + c.blockedTicks, 0) / r.carStats.reduce((a, c) => a + c.racingTicks, 0),
-  overtakes: r.carStats.reduce((a, c) => a + c.successes, 0),
-  contacts: r.carStats.reduce((a, c) => a + c.contacts, 0) / 2,
-  ticks: r.ticks,
-});
-const origCache = new Map<string, RaceSummary>();
-const origRun = (combo: Combo, track: Track, seed: number) => {
-  const key = `${comboName(combo)}|${track.id}|${seed}`;
-  if (!origCache.has(key)) origCache.set(key, summarize(race(track, seed, testCar(BASE), combo)));
-  return origCache.get(key)!;
-};
-
-function layer2(seeds: number[], combo: Combo) {
-  const orig: RaceSummary[] = [];
-  let controlDiff = 0;
-  for (const t of TRACKS)
-    for (const s of seeds) {
-      const o = origRun(combo, t, s);
-      orig.push(o);
-      if (summarize(race(t, s, testCar(BASE), combo)).rank !== o.rank) controlDiff++; // 대조군: 원본을 한 번 더
-    }
-  const m18 = {
-    block: mean(orig.map((r) => r.blockRatio)),
-    overtakeShare: mean(orig.map((r) => (r.overtakes > 0 ? 1 : 0))),
-    contacts: orig.reduce((a, r) => a + r.contacts, 0),
-  };
-  const m18Fails = [
-    m18.block < M18_BLOCK_RATIO && '막힘',
-    m18.overtakeShare < M18_OVERTAKE_RACE_SHARE && '추월',
-    m18.contacts < M18_CONTACTS && '접촉',
-  ].filter(Boolean);
-  const spread = sd(orig.map((r) => r.rank));
-  const perStat = STATS.map((stat) => {
-    const ranks = (d: number) =>
-      TRACKS.flatMap((t) => seeds.map((s) => summarize(race(t, s, testCar({ ...BASE, [stat]: BASE[stat] + d }), combo)).rank));
-    const r1 = ranks(1);
-    const r2 = ranks(2);
-    const d1 = mean(orig.map((o, i) => o.rank - r1[i]));
-    const d2 = mean(orig.map((o, i) => o.rank - r2[i]));
-    const top1 = mean(r1.map((r) => (r === 1 ? 1 : 0)));
-    const fails = [
-      !(d2 >= d1 && d1 > 0) && '단조성',
-      spread < L2_SPREAD_MIN && '퍼짐',
-      !(top1 <= L2_SATURATION_TOP && mean(r1) >= L2_SATURATION_MEAN) && '포화',
-      m18Fails.length && `상호작용(${m18Fails.join('·')})`,
-    ].filter(Boolean);
-    const verdict = controlDiff ? '무효(대조군)' : fails.length ? `판별 불가: ${fails.join(', ')}` : '통과';
-    return { stat, d1, d2, top1, meanR1: mean(r1), verdict };
-  });
-  return { controlDiff, n: orig.length, spread, m18, perStat };
-}
-
-const listHash = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex').slice(0, 16);
 
 function printLayer2(): void {
   out(`## QA 2층 재정의 (INT §9.2, k=${EXIT_LIMIT_RELAX}, 3랩, 테스트 차 1대 + F-2 상대 9대)`);
@@ -342,7 +248,7 @@ function printLayer2(): void {
   ] as const) {
     const rows: (string | number)[][] = [];
     for (const combo of COMBOS) {
-      const r = layer2(seeds, combo);
+      const r = layer2(TRACKS, seeds, combo);
       const m = `막힘 ${f(r.m18.block * 100, 1)}%, 추월 레이스 ${f(r.m18.overtakeShare, 2)}, 접촉 ${r.m18.contacts}`;
       for (const s of r.perStat)
         rows.push([comboName(combo), STAT_KO[s.stat], `${r.controlDiff} / ${r.n}`, f(s.d1, 2), f(s.d2, 2), f(r.spread, 2), `${f(s.top1, 2)} · ${f(s.meanR1, 2)}`, m, s.verdict]);
@@ -355,8 +261,6 @@ function printLayer2(): void {
 }
 
 // ---------- 레이서 행동 비교 (같은 차, 레이서만 다름) ----------
-
-const RACERS: Entry['racer'][] = load('../data/racers.json').racers;
 
 function printRacers(): void {
   out(`## 레이서 행동 비교 (기준 차 + 레이서, 상대 F-2 9대, 확인용 시드 ${QA_CONFIRM_SEEDS.length}개 × 트랙 3종, 기록만)`);
