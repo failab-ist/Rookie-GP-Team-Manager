@@ -5,7 +5,6 @@
   "port": 8300,
   "master_channel": "general",
   "master_model": null,
-  "work_root": "C:/orch/work",
   "max_revisions": 2,
   "default_main": {
     "agent": "claude"
