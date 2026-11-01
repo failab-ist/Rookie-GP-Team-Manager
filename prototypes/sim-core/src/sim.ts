@@ -31,6 +31,11 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   slipRatio: C.SLIP_RATIO,
   laneCount: C.LANE_COUNT,
   capWhileChanging: C.CAP_WHILE_CHANGING,
+  otRelease: C.OT_RELEASE,
+  otSpanCorner: C.OT_SPAN_CORNER,
+  dirtyAir: C.DIRTY_AIR,
+  boost: C.BOOST,
+  cornerPriority: C.CORNER_PRIORITY,
 };
 
 // 막힘 상한 v_cap (INT §4.2). gap = 같은 차선 앞뒤 간격 g
@@ -64,6 +69,13 @@ type Car = {
   passive: PassiveId | null;
   ps: { state: 'idle' | 'active' | 'cooldown'; until: number; prevCond: boolean; usedMove: boolean; lastEnd: number; aMul: number };
   log: CarStatsLog;
+  vPrev: number; // 직전 틱 속도 (OT-4 원인 판정)
+  pendingReturn: number | null; // OT-3: 코너에서 실패하면 다음 직선에서 원래 차선으로
+  boostUntil: number; // OT-6 부스트가 끝나는 누적 거리
+  yieldTo: number | null; // OT-7 코너 우선권을 진 상대
+  yieldEnd: number; // OT-7 그 코너 끝 누적 거리
+  lastMistake: number; // 혼전 실수 틱
+  lastContact: number; // 접촉 시작 틱
 };
 
 // opts: 비교 실험용. 빠진 값은 DEFAULT_OPTIONS
@@ -114,7 +126,18 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       passiveActivations: 0,
       drawbacks: {},
       solver: { opportunities: 0, forfeits: 0, successesActive: 0, successesInactive: 0 },
+      passes: 0,
+      passesS1: 0,
+      passCauses: {},
+      boosts: 0,
     },
+    vPrev: 0,
+    pendingReturn: null,
+    boostUntil: -Infinity,
+    yieldTo: null,
+    yieldEnd: -Infinity,
+    lastMistake: -Infinity,
+    lastContact: -Infinity,
   }));
   if (o.interaction) {
     // 2열 엇갈림 그리드 (INT §4.5). 출발 순서 0번이 맨 앞 줄 B열
@@ -197,6 +220,70 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
   const contactPairs = new Map<number, { on: boolean; offTicks: number; sinceFix: number; releasedAt: number }>();
 
   const decTicks = ticksOf(C.DECISION_SECONDS);
+  const holdTicks = ticksOf(C.PASS_HOLD_SECONDS);
+  // OT-3: 지금 직선 다음, 코너를 하나 이상 지난 직선의 끝 (누적 거리)
+  const nextStraightEnd = (sAbs: number) => {
+    let i = course.segs.indexOf(segAt(course, sAbs));
+    let off = sAbs - (sAbs % L);
+    let seenCorner = false;
+    for (let k = 0; k < 2 * course.segs.length; k++) {
+      i++;
+      if (i === course.segs.length) {
+        i = 0;
+        off += L;
+      }
+      const sg = course.segs[i];
+      if (sg.kind === 'corner') seenCorner = true;
+      else if (seenCorner) return off + sg.end;
+    }
+    return sAbs - (sAbs % L) + segAt(course, sAbs).end;
+  };
+  const inCorner = (c: Car) => segAt(course, c.s).kind === 'corner';
+  const canStartChange = (c: Car) => !o.otSpanCorner || !inCorner(c); // OT-3 코너 안에서는 차선 유지
+  // OT-5 추격 상태: 바로 앞차(차선 무관)와 시간 간격 ≤ CHASE_SECONDS. 틱 시작에 정한다
+  let chasing = new Set<Car>();
+  const computeChasing = (act: Car[]) => {
+    chasing = new Set();
+    for (const c of act) {
+      let ahead: Car | null = null;
+      for (const d of act) if (d !== c && d.s > c.s && (!ahead || d.s < ahead.s)) ahead = d;
+      if (ahead && (ahead.s - c.s) / Math.max(c.v, 1) <= C.CHASE_SECONDS) chasing.add(c);
+    }
+  };
+  // OT-6 부스트 구간: 트랙에서 가장 긴 직선(같으면 앞 구간) 1곳. 실험용 설정이며 트랙 파일은 그대로
+  const boostSeg = course.segs.filter((s) => s.kind === 'straight').reduce((a, b) => (b.length > a.length ? b : a));
+  const crossed = (from: number, to: number, at: number) => Math.floor((from - at) / L) < Math.floor((to - at) / L);
+  // OT-4 추월 기록: 앞뒤가 바뀐 뒤 PASS_HOLD_SECONDS 유지되면 기록
+  const pendingPasses: { tick: number; passer: Car; passed: Car; cause: string; attempt: boolean; where: { lap: number; segment: string } }[] = [];
+  const phaseOf = (c: Car): 'corner' | 'exit' | 'brake' | 'straight' => {
+    const sg = segAt(course, c.s);
+    if (sg.kind === 'corner') return c.s % L < sg.apex ? 'corner' : 'exit';
+    if (c.v < c.vPrev - 1e-6) return 'brake';
+    return c.v >= effParams(c).vTop - 0.5 ? 'straight' : 'exit';
+  };
+  const passCause = (passer: Car, passed: Car): string => {
+    const recent = (t0: number) => tick - t0 <= holdTicks;
+    if (recent(passer.lastContact) || recent(passed.lastContact)) return 'contact';
+    if (recent(passed.lastMistake)) return 'mistake';
+    if (passer.s < passer.boostUntil) return 'boost';
+    const pp = phaseOf(passer);
+    if (pp === 'brake' || phaseOf(passed) === 'brake') return 'brake';
+    return pp;
+  };
+  const recordPass = (pp: (typeof pendingPasses)[number]) => {
+    events.push(makeEvent(pp.tick, EventKind.overtake, [pp.passer.i, pp.passed.i], pp.where, null, `${pp.cause}:${pp.attempt ? 'S1' : 'free'}:by:${pp.passer.i}`));
+    pp.passer.log.passes++;
+    if (pp.attempt) pp.passer.log.passesS1++;
+    pp.passer.log.passCauses[pp.cause] = (pp.passer.log.passCauses[pp.cause] ?? 0) + 1;
+  };
+  const resolvePasses = (final: boolean) => {
+    for (let i = pendingPasses.length - 1; i >= 0; i--) {
+      const pp = pendingPasses[i];
+      if (!final && tick - pp.tick < holdTicks) continue;
+      if (pp.passer.s > pp.passed.s) recordPass(pp);
+      pendingPasses.splice(i, 1);
+    }
+  };
 
   while (finishTick.some((t) => t === null)) {
     // 끝나지 않는 레이스 방지 (서버에서 멈추지 않게). 정상 레이스는 수십 초다
@@ -215,13 +302,26 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       }
     } else {
       const act = active(); // (1) 직전 틱 (순위, 슬롯) 순서 (INT §8)
+      if (o.dirtyAir > 0 || o.boost > 0) computeChasing(act);
 
       // (2) 막힘 상한 (INT §4.2)
       const cap = new Map<Car, number>();
       for (const c of act) {
         // 변경 중(나가는 중)인 차가 원래 차선 앞차를 무시하는 것은 비교 스위치일 때만. 뒤차는 두 차선 모두에서 이 차에 막힌다 (R1-3)
-        const f = !o.capWhileChanging && changing(c) && c.dir === 1 ? frontOf(c, c.to) : frontOf(c);
+        // OT-2: 옆 간격이 차 폭 이상 벌어지면(변경 진행 0.75 이상) 원래 차선 앞차 상한을 푼다
+        const outward = changing(c) && c.dir === 1;
+        const clear = Math.abs(laneCenter(c.to) - laneCenter(c.from)) * c.prog >= C.CAR_WIDTH;
+        const f = outward && (!o.capWhileChanging || (o.otRelease && clear)) ? frontOf(c, c.to) : frontOf(c);
         if (f) cap.set(c, blockCap(f.v, gapTo(c, f)));
+        // OT-7 우선권을 진 차: 이긴 차 뒤 최소 간격까지 물러난다 (제동 능력 안에서)
+        if (c.yieldTo !== null) {
+          const w = cars[c.yieldTo];
+          if (w.finished || c.s >= c.yieldEnd || c.s <= w.s - C.CAR_LENGTH - C.GAP_MIN) c.yieldTo = null;
+          else {
+            const yv = Math.max(c.v - c.p.aBrk * C.TICK_SECONDS, w.v + (w.s - c.s - C.CAR_LENGTH - C.GAP_MIN) / C.BLOCK_TAU);
+            cap.set(c, Math.min(cap.get(c) ?? Infinity, yv));
+          }
+        }
       }
 
       // (3) 차선 변경 진행 · 목표 창 점검 · 되돌림 (INT R1-3, R1-4, §4.1)
@@ -253,7 +353,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
             c.ot = null;
             c.cooldownUntil = tick + ticksOf(C.OVERTAKE_COOLDOWN);
           } else if (inTarget && c.s - f.s >= C.CAR_LENGTH && c.s < c.ot.segEnd) {
-            events.push(makeEvent(tick, EventKind.overtake, [c.i, f.i], where(c.i), null, 'S1'));
+            judge(JudgementKind.overtakeS1, [c.i, f.i], 'S1');
             c.log.successes++;
             if (solverActive(c)) c.log.solver.successesActive++;
             else c.log.solver.successesInactive++;
@@ -265,12 +365,18 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
             const origClear = !windowBusy(c, c.ot.orig);
             if (changing(c)) {
               if (origClear) revert(c);
-            } else if (origClear) startChange(c, c.ot.orig);
+            } else if (!canStartChange(c)) c.pendingReturn = c.ot.orig;
+            else if (origClear) startChange(c, c.ot.orig);
             c.pendingCooldown = true;
             c.ot = null;
           }
         }
-        if (c.pendingCooldown && !changing(c)) {
+        // OT-3: 코너에서 미룬 복귀는 직선에 들어서면 (창이 비었을 때만, 아니면 RB-1 머묾)
+        if (c.pendingReturn !== null && !changing(c) && canStartChange(c)) {
+          if (!windowBusy(c, c.pendingReturn)) startChange(c, c.pendingReturn);
+          c.pendingReturn = null;
+        }
+        if (c.pendingCooldown && !changing(c) && c.pendingReturn === null) {
           c.pendingCooldown = false;
           c.cooldownUntil = tick + ticksOf(C.OVERTAKE_COOLDOWN);
         }
@@ -307,7 +413,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         else if (!(tryRng[c.i]() < pTry(entries[c.i].racer.stats))) continue;
         c.log.tries++;
         judge(JudgementKind.overtakeTry, [c.i, f.i], freeMove ? 'free' : null);
-        c.ot = { front: f.i, segEnd: c.s - (c.s % L) + seg.end, orig: c.from, target: lanes[0] };
+        c.ot = { front: f.i, segEnd: o.otSpanCorner ? nextStraightEnd(c.s) : c.s - (c.s % L) + seg.end, orig: c.from, target: lanes[0] };
         startChange(c, lanes[0]);
       }
 
@@ -323,6 +429,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         if (slipOn(c)) row[c.i][5] = 1;
         c.log.racingTicks++;
         c.log.laneTicks[c.from]++;
+        c.vPrev = c.v;
         for (let k = 0; k < C.SUBSTEPS; k++) {
           c.v = step(course, p, o.k, c.s, c.v, false, { cap: capV, noAccel: t < c.react });
           c.s += c.v * DT;
@@ -349,6 +456,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
             events.push(makeEvent(tick, EventKind.contact, [a.i, b.i], where(Math.min(a.i, b.i)), null, side ? 'side' : 'rear'));
             a.log.contacts++;
             b.log.contacts++;
+            a.lastContact = b.lastContact = tick;
             if (tick - st.releasedAt >= ticksOf(C.CONTACT_RELOSS_SECONDS)) {
               a.v *= 1 - C.CONTACT_LOSS; // 두 차 모두, 여러 쌍이면 곱 (INT Q-51)
               b.v *= 1 - C.CONTACT_LOSS;
@@ -382,12 +490,68 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
           if (nearCount(c, C.PACK_RADIUS) >= C.PACK_COUNT && rng() >= pFocus(stats)) {
             mul *= C.MISTAKE_EPS_MUL; // 혼전 실수 (S-A 집중)
             c.log.mistakes++;
+            c.lastMistake = tick;
           }
           if (solverActive(c)) mul *= C.SOLVER_EPS_MUL;
           c.eps = (2 * rng() - 1) * lateralErr(stats) * mul;
         }
         if (c.passive) updatePassive(c, t);
       }
+
+      // OT-6 부스트: 구간 시작점을 지날 때 추격 상태면 그 직선 동안
+      if (o.boost > 0)
+        for (const c of act) {
+          if (!crossed(before[c.i], c.s, boostSeg.start) || !chasing.has(c)) continue;
+          c.boostUntil = c.s - ((c.s - boostSeg.start) % L) + boostSeg.length;
+          c.log.boosts++;
+          judge(JudgementKind.boost, [c.i]);
+        }
+
+      // OT-7 코너 우선권: 나란히 선 두 차 중 하나가 코너 시작점에 닿을 때 정한다
+      if (o.cornerPriority)
+        for (const c of act)
+          for (const sg of course.segs) {
+            if (sg.kind !== 'corner' || !crossed(before[c.i], c.s, sg.start)) continue;
+            const cornerStart = c.s - ((c.s - sg.start) % L);
+            for (const d of act) {
+              if (d === c || shareLane(c, d) || Math.abs(c.s - d.s) >= C.CAR_LENGTH || c.yieldTo === d.i || d.yieldTo === c.i) continue;
+              const cAhead = c.s > d.s - C.CAR_LENGTH / 2; // 앞 범퍼가 상대 차 중심보다 앞
+              const dAhead = d.s > c.s - C.CAR_LENGTH / 2;
+              const inner = sg.innerLane ?? C.DEFAULT_INNER_LANE;
+              let winner: Car;
+              let why: string;
+              if (cAhead !== dAhead) {
+                winner = cAhead ? c : d;
+                why = 'front';
+              } else {
+                // 둘 다 상대 중심보다 앞(동률)이면 안쪽 차선 차, 그것도 같으면 슬롯 번호가 작은 차 (가안)
+                const dist = (x: Car) => Math.abs(x.from - inner);
+                winner = dist(c) !== dist(d) ? (dist(c) < dist(d) ? c : d) : c.i < d.i ? c : d;
+                why = 'inner';
+              }
+              const loser = winner === c ? d : c;
+              loser.yieldTo = winner.i;
+              loser.yieldEnd = cornerStart + sg.length;
+              judge(JudgementKind.cornerPriority, [winner.i, loser.i], `winner:${winner.i}:${why}`);
+            }
+          }
+
+      // OT-4 추월 기록: 이번 틱에 앞뒤가 바뀐 쌍 (둘 다 주행 중)
+      for (let ai = 0; ai < act.length; ai++)
+        for (let bi = ai + 1; bi < act.length; bi++) {
+          const a = act[ai];
+          const b = act[bi];
+          const was = Math.sign(before[a.i] - before[b.i]);
+          const now = Math.sign(a.s - b.s);
+          if (!was || !now || was === now) continue;
+          const back = pendingPasses.findIndex((pp) => (pp.passer === a && pp.passed === b) || (pp.passer === b && pp.passed === a));
+          if (back >= 0) pendingPasses.splice(back, 1); // 1초 안에 되돌아감
+          const passer = now > 0 ? a : b;
+          const passed = passer === a ? b : a;
+          if (back < 0)
+            pendingPasses.push({ tick, passer, passed, cause: passCause(passer, passed), attempt: passer.ot?.front === passed.i, where: where(passer.i) });
+        }
+      resolvePasses(false);
     }
 
     for (const c of cars) {
@@ -412,6 +576,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     if (o.interaction) lateral.push(cars.map((c) => y(c)));
   }
 
+  resolvePasses(true); // 끝날 때 남은 바뀜은 그때 앞서 있으면 기록
+
   // 슬립스트림 SS-1 조건: 같은 차선 앞차, 간격 ≤ g_ss, 직선 (INT §4.6)
   function slipOn(c: Car): boolean {
     const f = o.slipstream ? frontOf(c) : null;
@@ -420,13 +586,17 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
 
   // 슬립스트림 (INT §4.6 SS-1)과 코너 설계자 탈출 가속 (INT §6.1)을 반영한 이번 틱 능력치
   function effParams(c: Car): CarParams {
-    let { vTop, A } = c.p;
+    let { vTop, A, vg } = c.p;
     if (slipOn(c)) {
       vTop *= 1 + o.slipRatio;
       A *= 1 + o.slipRatio;
     }
     if (c.passive === 'corner-architect' && c.ps.state === 'active') A *= c.ps.aMul;
-    return vTop === c.p.vTop && A === c.p.A ? c.p : { ...c.p, vTop, A };
+    // OT-5 더티 에어: 추격 상태면 접지 한계(코너 한계와 그 앞 제동 기준)를 x% 낮춘다
+    if (o.dirtyAir > 0 && chasing.has(c)) vg *= 1 - o.dirtyAir / 100;
+    // OT-6 부스트 중 최고속도 +y%
+    if (c.s < c.boostUntil) vTop *= 1 + o.boost / 100;
+    return vTop === c.p.vTop && A === c.p.A && vg === c.p.vg ? c.p : { ...c.p, vTop, A, vg };
   }
 
   function passiveCondition(c: Car): boolean {
@@ -474,7 +644,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       }
     }
     // 코너 설계자 발동 중: 안쪽 차선으로 한 칸씩, 창 검사 없이 (겹치면 접촉 규칙)
-    if (c.passive === 'corner-architect' && ps.state === 'active' && !changing(c) && !c.ot) {
+    if (c.passive === 'corner-architect' && ps.state === 'active' && !changing(c) && !c.ot && canStartChange(c)) {
       const cur = segAt(course, c.s);
       const inner = (cur.kind === 'corner' ? cur.innerLane : cur.next?.innerLane) ?? C.DEFAULT_INNER_LANE;
       if (c.from !== inner) startChange(c, c.from + Math.sign(inner - c.from), true);

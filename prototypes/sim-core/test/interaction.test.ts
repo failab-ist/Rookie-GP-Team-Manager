@@ -64,3 +64,19 @@ test('단독 주행 모드는 상호작용 기록이 없다', () => {
   assert.equal(r.judgements.length, 0);
   assert.ok(r.events.every((e) => e.kind !== 3 && e.kind !== 4 && e.kind !== 5));
 });
+
+test('추월 5단계 흐름 묶음(OT_FLOW_ALL): 같은 입력 두 번이 바이트 단위로 같고, 추월 기록은 원인:S1|free:by:차 형식', async () => {
+  const { OT_FLOW_ALL } = await import('../src/config.ts');
+  for (const track of tracks) {
+    const run = () => simulate({ seed: 5, track, laps: 3, entries: lineup }, { ...OT_FLOW_ALL, slipstream: true });
+    const a = run();
+    assert.equal(JSON.stringify(a), JSON.stringify(run()), track.id);
+    for (const e of a.events.filter((x) => x.kind === 3)) {
+      const [cause, how, by, car] = e.cause!.split(':');
+      assert.ok(['contact', 'mistake', 'boost', 'brake', 'corner', 'exit', 'straight'].includes(cause), e.cause!);
+      assert.ok(how === 'S1' || how === 'free');
+      assert.equal(by, 'by');
+      assert.ok(e.cars.includes(Number(car)));
+    }
+  }
+});

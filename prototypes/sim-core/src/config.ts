@@ -82,6 +82,21 @@ export const DEFAULT_SLIPSTREAM = true; // 가안, SS-1 (INT Q-53 추천)
 export const DESIRED_SPEED: 'step' | 'target' = 'step';
 // 차선 변경 중 원래 차선 앞차에 속도가 묶이는지 (INT R1-1 + R2-1 글자대로 = true, §4.3 S1 예시 = false). 초안 안 충돌, 기본은 현행
 export const CAP_WHILE_CHANGING = true;
+
+// ---------- 추월 5단계 흐름 (AG-P036 A). 새 규칙은 모두 기본 꺼짐, 하나씩 켜서 잰다 (AG-P032 A) ----------
+export const OT_RELEASE = false; // OT-2
+export const OT_SPAN_CORNER = false; // OT-3
+export const DIRTY_AIR = 0; // OT-5 접지 한계 감소 %. 켤 때 가안 3 (근거 없음)
+export const DIRTY_AIR_ON = 3; // 가안, 근거 없음 (지시서 2026-11-02)
+export const BOOST = 0; // OT-6 부스트 최고속도 증가 %. 비교값 3, 5, 8 (가안, 근거 없음)
+export const BOOST_COMPARE = [3, 5, 8]; // 가안, 지시서 비교값
+export const CORNER_PRIORITY = false; // OT-7
+export const CHASE_SECONDS = 1.0; // 가안, OT-5 추격 상태 = 앞차(차선 무관)와 시간 간격 1.0 s 이내
+export const PASS_HOLD_SECONDS = 1.0; // 가안, OT-4 앞뒤가 바뀐 뒤 이 시간 유지되면 추월로 기록
+// OT-4 원인 우선순위 (가안, UNRESOLVED): 접촉 > 상대 실수 > 부스트 > 제동 구간 > 코너(접지) > 탈출(가속) > 직선(최고속도)
+export const PASS_CAUSE_ORDER = ['contact', 'mistake', 'boost', 'brake', 'corner', 'exit', 'straight'] as const;
+// 모두 켠 설정은 이름 붙인 묶음으로만 쓴다 (기본값 아님). 부스트는 비교값 가운데 5 (가안)
+export const OT_FLOW_ALL = { desiredSpeed: 'target' as const, otRelease: true, otSpanCorner: true, dirtyAir: DIRTY_AIR_ON, boost: 5, cornerPriority: true };
 export const DEFAULT_INNER_LANE = 0; // 가안, 근거 없음. 코너 방향 데이터가 없어 모든 코너 안쪽 = 0번 (디렉터 2026-11-02)
 
 // 레이서 능력치 S-A 판단형 (AG-P027 A, RACER F2 · F3 · F4, INT §6.1)

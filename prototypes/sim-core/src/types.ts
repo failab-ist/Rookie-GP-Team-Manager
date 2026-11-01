@@ -92,6 +92,9 @@ export const JudgementKind = {
   contactRelease: 4,
   passiveGrace: 5, // 출발 유예 중 조건 성립 (RACER §6)
   passiveCooldownHit: 6, // 쿨다운 중 조건 성립 (RACER §4)
+  overtakeS1: 7, // 정식 시도 S1 성공 (추월 사건은 OT-4 앞뒤 바뀜 기록으로 남긴다)
+  cornerPriority: 8, // OT-7 코너 우선권 판정. cars = [이긴 차, 진 차] 오름차순, cause = winner:<차>:<front|inner>
+  boost: 9, // OT-6 부스트 시작
 } as const;
 export type Judgement = Omit<RaceEvent, 'kind'> & { kind: (typeof JudgementKind)[keyof typeof JudgementKind] };
 
@@ -105,6 +108,10 @@ export type CarStatsLog = {
   racingTicks: number;
   laneTicks: number[];
   mistakes: number;
+  passes: number; // OT-4 추월 (이 차가 앞지른 수)
+  passesS1: number; // 그중 정식 시도 중 앞지른 수
+  passCauses: Record<string, number>;
+  boosts: number;
   passiveActivations: number;
   drawbacks: Record<string, number>;
   solver: { opportunities: number; forfeits: number; successesActive: number; successesInactive: number };
@@ -123,6 +130,12 @@ export type RaceOptions = {
   laneCount: number; // 차선 수 (INT §3.1 L-A). 비교 실험용
   // 차선 변경 중 원래 차선 앞차의 막힘 상한을 받을지. true = R1-1(두 차선 점유) + R2-1 글자대로(현행), false = §4.3 S1 예시대로. 초안 안에서 충돌 (보고서 CONFLICT)
   capWhileChanging: boolean;
+  // 추월 5단계 흐름 스위치 (AG-P036 A, 기본 꺼짐). OT-1은 desiredSpeed: 'target'
+  otRelease: boolean; // OT-2 차선을 옮기며 옆 간격이 차 폭 이상이면 원래 앞차 상한 해제
+  otSpanCorner: boolean; // OT-3 차선 변경은 직선에서만 시작, 시도는 다음 직선 끝까지
+  dirtyAir: number; // OT-5 추격 상태 접지 한계 감소 % (0 = 꺼짐)
+  boost: number; // OT-6 부스트 구간 최고속도 증가 % (0 = 꺼짐)
+  cornerPriority: boolean; // OT-7 코너 우선권
 };
 
 // QA 전용: 출발 위치를 직접 정하고(대수 제한 없음) 틱별 상태를 기록한다. 경기 규칙이 아니다
