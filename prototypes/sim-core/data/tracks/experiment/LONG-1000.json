@@ -1,0 +1,10 @@
+{
+  "_note": "2대 시험용 (긴 직선 1000u와 앞뒤 코너). 설계 트랙 아님. 코너 bend 0.7, 폭 12는 CAR §5 공통값",
+  "id": "LONG-1000",
+  "segments": [
+    {"id":"L-01","kind":"straight","length":1000,"bend":0,"width":12,"passable":true},
+    {"id":"L-02","kind":"corner","length":100,"bend":0.7,"width":12,"passable":false},
+    {"id":"L-03","kind":"straight","length":200,"bend":0,"width":12,"passable":true},
+    {"id":"L-04","kind":"corner","length":100,"bend":0.7,"width":12,"passable":false}
+  ]
+}

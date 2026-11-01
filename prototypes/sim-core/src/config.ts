@@ -75,11 +75,13 @@ export const GRID_STAGGER = 4; // 가안, INT §4.5 엇갈림 u
 export const GRID_LANES = [0, 2] as const; // 가안, INT §4.5 열 A, B 차선
 export const REACTION_MAX = 0.3; // 가안, INT §4.5 r_max s (R1일 때만, Q-52)
 export const SLIP_GAP = 10; // 가안, INT §4.6 g_ss u (SS-1일 때만, Q-53)
-export const SLIP_RATIO = 0.03; // 가안, INT §4.6 s_ss
+export const SLIP_RATIO = 0.03; // 가안, INT §4.6 s_ss (기본값. 비교는 simulate 옵션 slipRatio)
 export const DEFAULT_REACTION = false; // 가안, R0 (INT Q-52 추천 없음)
 export const DEFAULT_SLIPSTREAM = true; // 가안, SS-1 (INT Q-53 추천)
 // 추월 시도 조건의 '원하는 속도' 해석 (INT R3-1에 정의 없음, UNRESOLVED). 기본은 3단계와 같은 step
 export const DESIRED_SPEED: 'step' | 'target' = 'step';
+// 차선 변경 중 원래 차선 앞차에 속도가 묶이는지 (INT R1-1 + R2-1 글자대로 = true, §4.3 S1 예시 = false). 초안 안 충돌, 기본은 현행
+export const CAP_WHILE_CHANGING = true;
 export const DEFAULT_INNER_LANE = 0; // 가안, 근거 없음. 코너 방향 데이터가 없어 모든 코너 안쪽 = 0번 (디렉터 2026-11-02)
 
 // 레이서 능력치 S-A 판단형 (AG-P027 A, RACER F2 · F3 · F4, INT §6.1)

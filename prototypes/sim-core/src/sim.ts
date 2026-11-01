@@ -14,8 +14,10 @@ import {
   type Judgement,
   type RaceEvent,
   type RaceInput,
+  type QaHooks,
   type RaceOptions,
   type RaceResult,
+  type TraceRow,
 } from './types.ts';
 
 export const DEFAULT_OPTIONS: RaceOptions = {
@@ -26,6 +28,9 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   accelFormula: C.ACCEL_FORMULA,
   latSpeed: C.LAT_SPEED,
   desiredSpeed: C.DESIRED_SPEED,
+  slipRatio: C.SLIP_RATIO,
+  laneCount: C.LANE_COUNT,
+  capWhileChanging: C.CAP_WHILE_CHANGING,
 };
 
 // 막힘 상한 v_cap (INT §4.2). gap = 같은 차선 앞뒤 간격 g
@@ -62,10 +67,12 @@ type Car = {
 };
 
 // opts: 비교 실험용. 빠진 값은 DEFAULT_OPTIONS
-export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): RaceResult {
+export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: QaHooks = {}): RaceResult {
   const o: RaceOptions = { ...DEFAULT_OPTIONS, ...opts };
-  validate(input, o.k);
+  validate(input, o.k, qa.start ? qa.start.length : C.ENTRY_COUNT);
   if (!(o.latSpeed > 0)) throw new Error('횡 속도 v_lat은 0보다 커야 한다 (INT §4.1)');
+  if (!(o.slipRatio >= 0)) throw new Error('슬립스트림 비율 s_ss는 0 이상 (INT §4.6)');
+  if (!(Number.isInteger(o.laneCount) && o.laneCount >= 3)) throw new Error('차선 수는 3 이상 정수 (출발 그리드가 0번, 2번 차선을 쓴다)');
   const { seed, track, laps, entries } = input;
   const course = buildCourse(track.segments, true);
   const L = course.length;
@@ -117,7 +124,13 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
       cars[car].s = C.GRID_ROW_GAP * row + (colB ? C.GRID_STAGGER : 0);
       cars[car].from = cars[car].to = colB ? C.GRID_LANES[1] : C.GRID_LANES[0];
     });
+    qa.start?.forEach((st, i) => {
+      cars[i].s = st.s;
+      cars[i].v = st.v;
+      cars[i].from = cars[i].to = st.lane;
+    });
   }
+  const trace: TraceRow[][] = [];
   const tryRng: Rng[] = idx.map((i) => subStream(seed, i, 'try'));
   const epsRng: Rng[] = idx.map((i) => subStream(seed, i, 'eps'));
 
@@ -206,7 +219,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
       // (2) 막힘 상한 (INT §4.2)
       const cap = new Map<Car, number>();
       for (const c of act) {
-        const f = frontOf(c);
+        // 변경 중(나가는 중)인 차가 원래 차선 앞차를 무시하는 것은 비교 스위치일 때만. 뒤차는 두 차선 모두에서 이 차에 막힌다 (R1-3)
+        const f = !o.capWhileChanging && changing(c) && c.dir === 1 ? frontOf(c, c.to) : frontOf(c);
         if (f) cap.set(c, blockCap(f.v, gapTo(c, f)));
       }
 
@@ -273,7 +287,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
           passiveEvent(c, 'T-B-straight');
           continue;
         }
-        let lanes = [c.from - 1, c.from + 1].filter((l) => l >= 0 && l < C.LANE_COUNT && !windowBusy(c, l));
+        let lanes = [c.from - 1, c.from + 1].filter((l) => l >= 0 && l < o.laneCount && !windowBusy(c, l));
         if (!lanes.length) continue;
         if (solverActive(c)) {
           // 침착한 해결사: 위험한 차선은 포기하고, 남으면 주변 차가 적은 차선 (디렉터 2026-11-02)
@@ -298,17 +312,24 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
       }
 
       // 이동 (막힘 상한, 슬립스트림, 패시브 반영)
+      const row: TraceRow[] = cars.map((c) => [c.v, c.from, c.to, c.prog, 0, 0]);
       for (const c of act) {
         const p = effParams(c);
         const capV = cap.get(c) ?? Infinity;
-        if (capV < desired.get(c)! - 1e-9) c.log.blockedTicks++;
+        if (capV < desired.get(c)! - 1e-9) {
+          c.log.blockedTicks++;
+          row[c.i][4] = 1;
+        }
+        if (slipOn(c)) row[c.i][5] = 1;
         c.log.racingTicks++;
         c.log.laneTicks[c.from]++;
         for (let k = 0; k < C.SUBSTEPS; k++) {
           c.v = step(course, p, o.k, c.s, c.v, false, { cap: capV, noAccel: t < c.react });
           c.s += c.v * DT;
         }
+        row[c.i][0] = c.v;
       }
+      if (qa.trace) trace.push(row);
 
       // (5) 접촉 (INT §3.4, §4.4): 손실 → 위치 처리
       const fixPosition = (a: Car, b: Car) => (a.s <= b.s ? rearFix(a, b) : rearFix(b, a));
@@ -391,13 +412,18 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
     if (o.interaction) lateral.push(cars.map((c) => y(c)));
   }
 
+  // 슬립스트림 SS-1 조건: 같은 차선 앞차, 간격 ≤ g_ss, 직선 (INT §4.6)
+  function slipOn(c: Car): boolean {
+    const f = o.slipstream ? frontOf(c) : null;
+    return !!f && segAt(course, c.s).bend === 0 && gapTo(c, f) <= C.SLIP_GAP;
+  }
+
   // 슬립스트림 (INT §4.6 SS-1)과 코너 설계자 탈출 가속 (INT §6.1)을 반영한 이번 틱 능력치
   function effParams(c: Car): CarParams {
     let { vTop, A } = c.p;
-    const f = o.slipstream ? frontOf(c) : null;
-    if (f && segAt(course, c.s).bend === 0 && gapTo(c, f) <= C.SLIP_GAP) {
-      vTop *= 1 + C.SLIP_RATIO;
-      A *= 1 + C.SLIP_RATIO;
+    if (slipOn(c)) {
+      vTop *= 1 + o.slipRatio;
+      A *= 1 + o.slipRatio;
     }
     if (c.passive === 'corner-architect' && c.ps.state === 'active') A *= c.ps.aMul;
     return vTop === c.p.vTop && A === c.p.A ? c.p : { ...c.p, vTop, A };
@@ -409,7 +435,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
       const f = frontOf(c);
       if (seg.bend >= C.GAP_HUNTER_BEND || !f || changing(c) || gapTo(c, f) > C.GAP_HUNTER_GAP) return false;
       return [c.from - 1, c.from + 1].some(
-        (l) => l >= 0 && l < C.LANE_COUNT && !cars.some((d) => d !== c && !d.finished && occupies(d, l) && Math.abs(d.s - c.s) <= C.GAP_HUNTER_SIDE),
+        (l) => l >= 0 && l < o.laneCount && !cars.some((d) => d !== c && !d.finished && occupies(d, l) && Math.abs(d.s - c.s) <= C.GAP_HUNTER_SIDE),
       );
     }
     if (c.passive === 'corner-architect') {
@@ -469,6 +495,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}): Rac
     seconds: tick * C.TICK_SECONDS,
     frames,
     lateral,
+    ...(qa.trace ? { trace } : {}),
     events: sortEvents(events),
     judgements: sortEvents(judgements),
     carStats: cars.map((c) => c.log),
@@ -491,11 +518,11 @@ export function checkCarTotal(id: string, s: CarStats): void {
   if (total !== C.CAR_TOTAL) throw new Error(`차량 ${id}: 능력치 합계 ${total} ≠ ${C.CAR_TOTAL}`);
 }
 
-export function validate(input: RaceInput, k = C.EXIT_LIMIT_RELAX): void {
+export function validate(input: RaceInput, k = C.EXIT_LIMIT_RELAX, count: number = C.ENTRY_COUNT): void {
   if (!isInt(input.seed) || input.seed < 0 || input.seed > 0xffffffff) throw new Error('seed는 0 이상 2^32-1 이하 정수');
   if (!isInt(input.laps) || input.laps < 1) throw new Error('laps는 1 이상 정수 (RACE_UNIT_LENGTH_CAMERA_P0_DRAFT.md:94-95)');
   if (!(k >= 0 && k <= 1)) throw new Error('정점 뒤 한계 풀림 계수 k는 0 이상 1 이하');
-  if (input.entries?.length !== C.ENTRY_COUNT) throw new Error(`참가 대수는 ${C.ENTRY_COUNT}대`);
+  if (input.entries?.length !== count) throw new Error(`참가 대수는 ${count}대`);
   // 레이서 F1 총합 검증 (RACER_STATS_PASSIVES_DRAFT.md:136-150)
   for (const { racer, car } of input.entries) {
     const values = [racer.stats.overtake, racer.stats.control, racer.stats.focus];

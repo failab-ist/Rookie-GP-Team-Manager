@@ -95,12 +95,13 @@ export const testCar = (stats: CarStats, racer: Entry['racer'] = { id: 'test', s
   car: { id: 'test', stats },
 });
 
-export type RaceSummary = { rank: number; blockRatio: number; overtakes: number; tries: number; contacts: number; ticks: number; overtakeSegs: string[] };
+export type RaceSummary = { rank: number; blockRatio: number; overtakes: number; tries: number; aborts: number; contacts: number; ticks: number; overtakeSegs: string[] };
 export const summarize = (r: ReturnType<typeof simulate>): RaceSummary => ({
   rank: r.finishOrder.indexOf(0) + 1,
   blockRatio: r.carStats.reduce((a, c) => a + c.blockedTicks, 0) / r.carStats.reduce((a, c) => a + c.racingTicks, 0),
   overtakes: r.carStats.reduce((a, c) => a + c.successes, 0),
   tries: r.carStats.reduce((a, c) => a + c.tries, 0),
+  aborts: r.judgements.filter((j) => j.kind === 3).length, // 목표 차선 창에 차가 들어와 되돌아옴
   contacts: r.carStats.reduce((a, c) => a + c.contacts, 0) / 2,
   ticks: r.ticks,
   overtakeSegs: r.events.filter((e) => e.kind === 3).map((e) => e.segment),

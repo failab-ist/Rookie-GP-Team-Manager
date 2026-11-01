@@ -119,7 +119,19 @@ export type RaceOptions = {
   latSpeed: number; // 차선 변경 횡 속도 v_lat u/s (INT §4.1)
   // 추월 시도 조건의 '원하는 속도' (INT R3-1, 초안에 정의 없음). step = 다음 물리 스텝 속도(3단계 구현), target = 막히지 않았을 때의 한계 속도
   desiredSpeed: 'step' | 'target';
+  slipRatio: number; // 슬립스트림 비율 s_ss (INT §4.6). 비교 실험용
+  laneCount: number; // 차선 수 (INT §3.1 L-A). 비교 실험용
+  // 차선 변경 중 원래 차선 앞차의 막힘 상한을 받을지. true = R1-1(두 차선 점유) + R2-1 글자대로(현행), false = §4.3 S1 예시대로. 초안 안에서 충돌 (보고서 CONFLICT)
+  capWhileChanging: boolean;
 };
+
+// QA 전용: 출발 위치를 직접 정하고(대수 제한 없음) 틱별 상태를 기록한다. 경기 규칙이 아니다
+export type QaHooks = {
+  start?: { s: number; lane: number; v: number }[];
+  trace?: boolean;
+};
+// trace[틱][차] = [속도, from 차선, to 차선, 변경 진행, 막힘 상한 적용 0/1, 슬립스트림 적용 0/1]
+export type TraceRow = [number, number, number, number, number, number];
 
 export type RaceHeader = {
   seed: number;
@@ -137,6 +149,7 @@ export type RaceResult = {
   seconds: number; // ticks × tickSeconds
   frames: number[][]; // [틱][차 번호] = 누적 주행 거리
   lateral: number[][]; // [틱][차 번호] = 횡 위치 y (u). 단독 주행 모드는 빈 배열
+  trace?: TraceRow[][]; // QaHooks.trace일 때만
   events: RaceEvent[];
   judgements: Judgement[];
   carStats: CarStatsLog[];
