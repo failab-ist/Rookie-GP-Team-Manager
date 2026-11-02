@@ -1,0 +1,131 @@
+{
+  "id": "AG-DT20261102063110181",
+  "kind": "pick",
+  "title": "표 A FIA 서킷 지도 판독 근거 없음",
+  "bluf": "판독 파일과 AG-P049가 저장소에 없어 표 A의 URL·발행일·코너별 L/R을 채울 근거가 없습니다",
+  "context": "corner_directions_draft.md와 fia_2025 폴더 0건, AG-P049 0건. R-2·R-3·Q-85·결정 위치는 지시 값으로 바로 쓸 수 있음. 원 서킷 R 비율은 25/41=61%로 지시문의 64%와 다름",
+  "options": [
+    {
+      "key": "A",
+      "label": "판독 파일 받은 뒤 전부 진행",
+      "pros": "완료 기준 4번까지 출처 있는 값으로 한 번에 충족",
+      "cons": "디렉터가 판독 파일이나 URL·발행일·L/R 목록을 줘야 함",
+      "on_choose": "이 결정을 담아 작업 다시 진행",
+      "task": {
+        "title": "코너 방향표를 우리 트랙 기준으로 기록 — 판독 파일 받은 뒤 전부 진행",
+        "goal": "디렉터 지시(모티브이므로 우리 트랙에 맞게 정함)에 따라 DIRECTION 초안에 M1~M3 코너 20개의 방향과 안쪽 차선을 적고, 2025 FIA 서킷 지도 판독 결과는 참고 자료로 기록한다.\n디렉터 결정: A. 판독 파일 받은 뒤 전부 진행",
+        "allowed_paths": [
+          "design_ssot/drafts/PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md"
+        ],
+        "spec_refs": [
+          "design_ssot/drafts/PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md",
+          "design_ssot/drafts/PROTO_TRACKS_MOTIF_DRAFT.md",
+          "prototypes/sim-core/qa/sources/fia_2025/corner_directions_draft.md",
+          ".studio/decisions.jsonl"
+        ],
+        "acceptance": [
+          "R-2 20행에 방향을 적는다: M1 R R R L L R, M2 R L R L R R L R, M3 R L R R L R (C1부터 순서대로)",
+          "안쪽 차선은 규약 A(L은 0, R은 2)로 적는다",
+          "20행 모두 '바꿈'으로 적고, 이유에 '모티브라 우리 트랙에 맞춤(디렉터 2026-11-02), 원 서킷 R 비율 64%와 추월 후보 직선 끝 좌우 번갈아 두기 원칙'을 적는다",
+          "표 A에 세 서킷의 2025 FIA 서킷 지도(문서명, URL, 발행일, 2쪽)와 코너별 L/R 판독 결과를 참고로 적고, 확신이 낮은 곳(오스트리아 2와 5, 헝가리 1A와 12A)을 표시한다",
+          "R-3에 우리 R:L(4:2, 5:3, 4:2)과 원 서킷 R:L(7:3, 9:7, 9:6)을 나란히 적는다",
+          "출처 상태 절을 새 상태로 고치고, Q-85(1:1 대응)는 '대응하지 않고 우리 트랙에 맞춤'으로 정리, Q-88은 AG-P049와 연결해 적는다",
+          "AG-P045, AG-P046 결정 기록 위치(decisions.jsonl:57-58)를 바로잡는다"
+        ],
+        "forbidden": [
+          "방향 값을 위와 다르게 적기",
+          "MOTIF §7 값(구간 길이, bend, 축소안) 바꾸기",
+          "코드와 트랙 데이터 파일 수정",
+          "차선 규약(Q-78) 확정",
+          "PDF와 PNG 파일 커밋",
+          "push나 merge"
+        ]
+      }
+    },
+    {
+      "key": "B",
+      "label": "지금 진행, 표 A 칸은 비움",
+      "pros": "R-2·R-3·상태·Q-85·Q-88·결정 위치는 바로 반영",
+      "cons": "표 A URL·발행일·코너별 L/R 미기재로 기준 4번 부분 충족",
+      "on_choose": "이 결정을 담아 작업 다시 진행",
+      "task": {
+        "title": "코너 방향표를 우리 트랙 기준으로 기록 — 지금 진행, 표 A 칸은 비움",
+        "goal": "디렉터 지시(모티브이므로 우리 트랙에 맞게 정함)에 따라 DIRECTION 초안에 M1~M3 코너 20개의 방향과 안쪽 차선을 적고, 2025 FIA 서킷 지도 판독 결과는 참고 자료로 기록한다.\n디렉터 결정: B. 지금 진행, 표 A 칸은 비움",
+        "allowed_paths": [
+          "design_ssot/drafts/PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md"
+        ],
+        "spec_refs": [
+          "design_ssot/drafts/PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md",
+          "design_ssot/drafts/PROTO_TRACKS_MOTIF_DRAFT.md",
+          "prototypes/sim-core/qa/sources/fia_2025/corner_directions_draft.md",
+          ".studio/decisions.jsonl"
+        ],
+        "acceptance": [
+          "R-2 20행에 방향을 적는다: M1 R R R L L R, M2 R L R L R R L R, M3 R L R R L R (C1부터 순서대로)",
+          "안쪽 차선은 규약 A(L은 0, R은 2)로 적는다",
+          "20행 모두 '바꿈'으로 적고, 이유에 '모티브라 우리 트랙에 맞춤(디렉터 2026-11-02), 원 서킷 R 비율 64%와 추월 후보 직선 끝 좌우 번갈아 두기 원칙'을 적는다",
+          "표 A에 세 서킷의 2025 FIA 서킷 지도(문서명, URL, 발행일, 2쪽)와 코너별 L/R 판독 결과를 참고로 적고, 확신이 낮은 곳(오스트리아 2와 5, 헝가리 1A와 12A)을 표시한다",
+          "R-3에 우리 R:L(4:2, 5:3, 4:2)과 원 서킷 R:L(7:3, 9:7, 9:6)을 나란히 적는다",
+          "출처 상태 절을 새 상태로 고치고, Q-85(1:1 대응)는 '대응하지 않고 우리 트랙에 맞춤'으로 정리, Q-88은 AG-P049와 연결해 적는다",
+          "AG-P045, AG-P046 결정 기록 위치(decisions.jsonl:57-58)를 바로잡는다"
+        ],
+        "forbidden": [
+          "방향 값을 위와 다르게 적기",
+          "MOTIF §7 값(구간 길이, bend, 축소안) 바꾸기",
+          "코드와 트랙 데이터 파일 수정",
+          "차선 규약(Q-78) 확정",
+          "PDF와 PNG 파일 커밋",
+          "push나 merge"
+        ]
+      }
+    },
+    {
+      "key": "C",
+      "label": "기억으로 표 A 채우기",
+      "pros": "한 번에 모든 칸이 참",
+      "cons": "출처 없는 값, 문서 규칙(:18) 위반. 추천 안 함",
+      "on_choose": "이 결정을 담아 작업 다시 진행",
+      "task": {
+        "title": "코너 방향표를 우리 트랙 기준으로 기록 — 기억으로 표 A 채우기",
+        "goal": "디렉터 지시(모티브이므로 우리 트랙에 맞게 정함)에 따라 DIRECTION 초안에 M1~M3 코너 20개의 방향과 안쪽 차선을 적고, 2025 FIA 서킷 지도 판독 결과는 참고 자료로 기록한다.\n디렉터 결정: C. 기억으로 표 A 채우기",
+        "allowed_paths": [
+          "design_ssot/drafts/PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md"
+        ],
+        "spec_refs": [
+          "design_ssot/drafts/PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md",
+          "design_ssot/drafts/PROTO_TRACKS_MOTIF_DRAFT.md",
+          "prototypes/sim-core/qa/sources/fia_2025/corner_directions_draft.md",
+          ".studio/decisions.jsonl"
+        ],
+        "acceptance": [
+          "R-2 20행에 방향을 적는다: M1 R R R L L R, M2 R L R L R R L R, M3 R L R R L R (C1부터 순서대로)",
+          "안쪽 차선은 규약 A(L은 0, R은 2)로 적는다",
+          "20행 모두 '바꿈'으로 적고, 이유에 '모티브라 우리 트랙에 맞춤(디렉터 2026-11-02), 원 서킷 R 비율 64%와 추월 후보 직선 끝 좌우 번갈아 두기 원칙'을 적는다",
+          "표 A에 세 서킷의 2025 FIA 서킷 지도(문서명, URL, 발행일, 2쪽)와 코너별 L/R 판독 결과를 참고로 적고, 확신이 낮은 곳(오스트리아 2와 5, 헝가리 1A와 12A)을 표시한다",
+          "R-3에 우리 R:L(4:2, 5:3, 4:2)과 원 서킷 R:L(7:3, 9:7, 9:6)을 나란히 적는다",
+          "출처 상태 절을 새 상태로 고치고, Q-85(1:1 대응)는 '대응하지 않고 우리 트랙에 맞춤'으로 정리, Q-88은 AG-P049와 연결해 적는다",
+          "AG-P045, AG-P046 결정 기록 위치(decisions.jsonl:57-58)를 바로잡는다"
+        ],
+        "forbidden": [
+          "방향 값을 위와 다르게 적기",
+          "MOTIF §7 값(구간 길이, bend, 축소안) 바꾸기",
+          "코드와 트랙 데이터 파일 수정",
+          "차선 규약(Q-78) 확정",
+          "PDF와 PNG 파일 커밋",
+          "push나 merge"
+        ]
+      }
+    }
+  ],
+  "recommend": {
+    "key": "A",
+    "why": "기획 담당 의견"
+  },
+  "urgency": "now",
+  "risk": "low",
+  "reversible": true,
+  "source": {
+    "role": "planner",
+    "run": "T20261102063110181"
+  }
+}
