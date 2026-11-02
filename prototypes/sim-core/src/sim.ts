@@ -318,7 +318,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         // OT-7 우선권을 진 차: 이긴 차 뒤 최소 간격까지 물러난다 (제동 능력 안에서)
         if (c.yieldTo !== null) {
           const w = cars[c.yieldTo];
-          if (w.finished || c.s >= c.yieldEnd || c.s <= w.s - C.CAR_LENGTH - C.GAP_MIN) c.yieldTo = null;
+          // 끝: 이긴 차 뒤 최소 간격까지 물러남, 코너 끝, 또는 이긴 차가 진 차 뒤로 완전히 처짐(더 양보할 상대가 없음. 막힘과 엮여 멈추는 것 방지)
+          if (w.finished || c.s >= c.yieldEnd || c.s <= w.s - C.CAR_LENGTH - C.GAP_MIN || w.s <= c.s - C.CAR_LENGTH) c.yieldTo = null;
           else {
             // 속도 하한 0 (INT R4-3). 출발 직후처럼 느릴 때 두 항이 모두 음수가 될 수 있다
             const yv = Math.max(0, c.v - c.p.aBrk * C.TICK_SECONDS, w.v + (w.s - c.s - C.CAR_LENGTH - C.GAP_MIN) / C.BLOCK_TAU);
