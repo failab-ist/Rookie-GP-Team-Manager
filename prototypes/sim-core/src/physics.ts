@@ -1,5 +1,5 @@
 // 차량 4능력치 주행 물리 (CAR_STATS_TRACKS_PROTO_DRAFT.md §3, §7). 화면 · node: 모듈 없음.
-import { A0, AC1_A0, AC1_KA, ACCEL_FORMULA, B0, CAR_STAT_MAX, G0, KA, KB, KG, KV, P_APEX, SUBSTEPS, TICK_SECONDS, V0 } from './config.ts';
+import { A0, AB_BASE_SCALE, AC1_A0, AC1_KA, ACCEL_FORMULA, ACCEL_POINT, B0, BASE_CAR_STAT, BRAKE_POINT, CAR_STAT_MAX, G0, KA, KB, KG, KV, P_APEX, SUBSTEPS, TICK_SECONDS, V0 } from './config.ts';
 import type { CarStats, TrackSegment } from './types.ts';
 
 export type CarParams = {
@@ -9,14 +9,37 @@ export type CarParams = {
   aBrk: number; // F5a 진입 감속도
 };
 
-// formula: 가속 공식 스위치 (current = CAR F3a, AC1 = INT §4.7 비교용)
-export function carParams(s: CarStats, formula: 'current' | 'AC1' = ACCEL_FORMULA): CarParams {
+// 능력치 1점 효과 맞추기 실험 스위치 (기본 꺼짐, config)
+export type StatTune = { accelPoint: number; brakePoint: number; abScale: number };
+export const NO_TUNE: StatTune = { accelPoint: ACCEL_POINT, brakePoint: BRAKE_POINT, abScale: AB_BASE_SCALE };
+
+// P-1: 5점 값 v5는 두고 1점당 비율 p가 되게 계수를 다시 푼다. p = 0.1·K / (1 + 0.5·K) → K = p / (0.1 − 0.5·p)
+function retuned(v5: number, p: number, n: number): number {
+  const n5 = BASE_CAR_STAT / CAR_STAT_MAX;
+  const step = 1 / CAR_STAT_MAX;
+  if (!(p > 0 && p < step / n5)) throw new Error(`1점당 비율 p는 0 초과 ${step / n5} 미만 (0점 값이 0 이하가 된다)`);
+  const k = p / (step - p * n5);
+  return (v5 * (1 + k * n)) / (1 + k * n5);
+}
+
+// formula: 가속 공식 스위치 (current = CAR F3a, AC1 = INT §4.7 비교용). tune: 1점 효과 실험 스위치
+export function carParams(s: CarStats, formula: 'current' | 'AC1' = ACCEL_FORMULA, tune: StatTune = NO_TUNE): CarParams {
   const n = (v: number) => v / CAR_STAT_MAX; // F1
+  const n5 = n(BASE_CAR_STAT);
+  let A = formula === 'AC1' ? AC1_A0 * (1 + AC1_KA * n(s.accel)) : A0 * (1 + KA * n(s.accel));
+  let aBrk = B0 * (1 + KB * n(s.brake));
+  if (tune.accelPoint > 0) A = retuned(formula === 'AC1' ? AC1_A0 * (1 + AC1_KA * n5) : A0 * (1 + KA * n5), tune.accelPoint, n(s.accel));
+  if (tune.brakePoint > 0) aBrk = retuned(B0 * (1 + KB * n5), tune.brakePoint, n(s.brake));
+  if (tune.abScale !== 1) {
+    if (!(tune.abScale > 0)) throw new Error('A0 · B0 배율은 0보다 커야 한다');
+    A *= tune.abScale;
+    aBrk *= tune.abScale;
+  }
   return {
     vTop: V0 * (1 + KV * n(s.topSpeed)),
-    A: formula === 'AC1' ? AC1_A0 * (1 + AC1_KA * n(s.accel)) : A0 * (1 + KA * n(s.accel)),
+    A,
     vg: G0 * (1 + KG * n(s.grip)),
-    aBrk: B0 * (1 + KB * n(s.brake)),
+    aBrk,
   };
 }
 

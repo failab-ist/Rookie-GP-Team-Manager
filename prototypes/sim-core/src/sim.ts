@@ -26,6 +26,9 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   reaction: C.DEFAULT_REACTION,
   slipstream: C.DEFAULT_SLIPSTREAM,
   accelFormula: C.ACCEL_FORMULA,
+  accelPoint: C.ACCEL_POINT,
+  brakePoint: C.BRAKE_POINT,
+  abScale: C.AB_BASE_SCALE,
   latSpeed: C.LAT_SPEED,
   desiredSpeed: C.DESIRED_SPEED,
   slipRatio: C.SLIP_RATIO,
@@ -89,7 +92,8 @@ type Car = {
 // opts: 비교 실험용. 빠진 값은 DEFAULT_OPTIONS
 export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: QaHooks = {}): RaceResult {
   const o: RaceOptions = { ...DEFAULT_OPTIONS, ...opts };
-  validate(input, o.k, qa.start ? qa.start.length : C.ENTRY_COUNT);
+  const baseP = carParams({ topSpeed: C.BASE_CAR_STAT, accel: C.BASE_CAR_STAT, grip: C.BASE_CAR_STAT, brake: C.BASE_CAR_STAT }, undefined, o); // 기준 차 코너 검사 · 부스트 구간 (지금까지와 같이 기본 가속 공식)
+  validate(input, o.k, qa.start ? qa.start.length : C.ENTRY_COUNT, baseP);
   if (!(o.latSpeed > 0)) throw new Error('횡 속도 v_lat은 0보다 커야 한다 (INT §4.1)');
   if (!(o.slipRatio >= 0)) throw new Error('슬립스트림 비율 s_ss는 0 이상 (INT §4.6)');
   if (!(Number.isInteger(o.laneCount) && o.laneCount >= 3)) throw new Error('차선 수는 3 이상 정수 (출발 그리드가 0번, 2번 차선을 쓴다)');
@@ -101,12 +105,14 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
   const idx = entries.map((_, i) => i);
 
   // 출발 순서는 시드 무작위 (AG-P011 C). 단독 주행 모드는 2단계와 같이 모두 0에서 출발
-  const grid = o.interaction ? shuffle(subStream(seed, 0, 'grid'), idx) : shuffle(createRng(seed), idx);
+  // qa.grid: QA 전용 출발 순서 지정 (출발 자리 영향 측정). 경기 규칙이 아니다
+  if (qa.grid && (!o.interaction || qa.grid.length !== n || [...qa.grid].sort((a, b) => a - b).some((v, i) => v !== i))) throw new Error('qa.grid는 상호작용 모드에서 차 번호 순열');
+  const grid = qa.grid ? [...qa.grid] : o.interaction ? shuffle(subStream(seed, 0, 'grid'), idx) : shuffle(createRng(seed), idx);
   const slotOf = new Map(grid.map((car, slot) => [car, slot]));
 
   const cars: Car[] = entries.map((e, i) => ({
     i,
-    p: carParams(e.car.stats, o.accelFormula),
+    p: carParams(e.car.stats, o.accelFormula, o),
     s: 0,
     v: 0,
     from: 1,
@@ -270,7 +276,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
   const boostSeg = zone ?? course.segs.filter((s) => s.kind === 'straight').reduce((a, b) => (b.length > a.length ? b : a));
   const zonePrev = zone && course.segs[(course.segs.indexOf(zone) - 1 + course.segs.length) % course.segs.length];
   const boostDetect = zonePrev ? zonePrev.start : boostSeg.start;
-  const boostLen = zone && zonePrev ? boostZoneLength(zone.length, zonePrev.bend, zone.next!.bend) : boostSeg.length;
+  const boostLen = zone && zonePrev ? boostZoneLength(zone.length, zonePrev.bend, zone.next!.bend, baseP) : boostSeg.length;
   if (!(boostLen > 0)) throw new Error(`트랙 ${track.id}: 부스트 구간 길이 ${boostLen} ≤ 0 (F-B2)`);
   const crossed = (from: number, to: number, at: number) => Math.floor((from - at) / L) < Math.floor((to - at) / L);
   // OT-4 추월 기록: 앞뒤가 바뀐 뒤 PASS_HOLD_SECONDS 유지되면 기록
@@ -777,7 +783,8 @@ export function checkCarTotal(id: string, s: CarStats): void {
   if (total !== C.CAR_TOTAL) throw new Error(`차량 ${id}: 능력치 합계 ${total} ≠ ${C.CAR_TOTAL}`);
 }
 
-export function validate(input: RaceInput, k = C.EXIT_LIMIT_RELAX, count: number = C.ENTRY_COUNT): void {
+// base: 코너 검사에 쓰는 기준 차 (실험 스위치를 켜면 그 값으로 검사)
+export function validate(input: RaceInput, k = C.EXIT_LIMIT_RELAX, count: number = C.ENTRY_COUNT, base?: CarParams): void {
   if (!isInt(input.seed) || input.seed < 0 || input.seed > 0xffffffff) throw new Error('seed는 0 이상 2^32-1 이하 정수');
   if (!isInt(input.laps) || input.laps < 1) throw new Error('laps는 1 이상 정수 (RACE_UNIT_LENGTH_CAMERA_P0_DRAFT.md:94-95)');
   if (!(k >= 0 && k <= 1)) throw new Error('정점 뒤 한계 풀림 계수 k는 0 이상 1 이하');
@@ -798,6 +805,6 @@ export function validate(input: RaceInput, k = C.EXIT_LIMIT_RELAX, count: number
     }
   }
   // 트랙 형식과 코너 검사 (CAR §4.1, §4.3)
-  const { errors } = checkTrack(input.track, k);
+  const { errors } = checkTrack(input.track, k, base);
   if (errors.length) throw new Error(`트랙 ${input.track?.id} 거부: ${errors.join('; ')}`);
 }

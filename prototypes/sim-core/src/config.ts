@@ -47,6 +47,14 @@ export const QA_CONFIRM_SEEDS = Array.from({ length: 50 }, (_, i) => 10001 + i);
 // 가속 공식 스위치 (AG-P029 A: 공식은 current 유지. AC1은 비교용, INT §4.7)
 // INT = design_ssot/drafts/RACE_INTERACTION_P0_DRAFT.md
 export const ACCEL_FORMULA: 'current' | 'AC1' = 'current';
+
+// 능력치 1점 효과 맞추기 실험 (지시서 2026-11-02). 기본 꺼짐 = CAR F3a · F5a 계수 그대로. 최고속도 · 접지 계수는 건드리지 않는다
+// P-1: 가속 · 제동의 1점당 비율 p (5점 값 대비). 5점 값(A 50, a_brk 75)은 그대로 두고 K = p / (0.1 − 0.5·p)로 계수를 다시 푼다. 0 = 꺼짐 (지금 4%), p < 0.2
+export const ACCEL_POINT = 0;
+export const BRAKE_POINT = 0;
+// P-2: 가속 · 제동 기본값 A0 · B0 배율 (1점당 비율 4%는 그대로). 1 = 꺼짐. 지시서 예시 단계 1, 0.75, 0.5, 0.35
+export const AB_BASE_SCALE = 1;
+export const AB_SCALE_STEPS = [1, 0.75, 0.5, 0.35]; // 지시서 예시 (가안)
 export const AC1_A0 = 30; // 가안, INT §4.7 AC-1 (A = 30(1 + 1.33n))
 export const AC1_KA = 1.33; // 가안, INT §4.7 AC-1
 

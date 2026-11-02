@@ -126,6 +126,10 @@ export type RaceOptions = {
   reaction: boolean; // R1 출발 반응 지연 (INT Q-52)
   slipstream: boolean; // SS-1 (INT Q-53)
   accelFormula: 'current' | 'AC1'; // INT §4.7
+  // 능력치 1점 효과 맞추기 실험 (기본 꺼짐): P-1 가속 · 제동 1점당 비율 (0 = 꺼짐), P-2 A0 · B0 배율 (1 = 꺼짐)
+  accelPoint: number;
+  brakePoint: number;
+  abScale: number;
   latSpeed: number; // 차선 변경 횡 속도 v_lat u/s (INT §4.1)
   // 추월 시도 조건의 '원하는 속도' (INT R3-1, 초안에 정의 없음). step = 다음 물리 스텝 속도(3단계 구현), target = 막히지 않았을 때의 한계 속도
   desiredSpeed: 'step' | 'target';
@@ -151,6 +155,7 @@ export type RaceOptions = {
 export type QaHooks = {
   start?: { s: number; lane: number; v: number }[];
   trace?: boolean;
+  grid?: number[]; // 출발 순서 지정 (자리 0 = 맨 앞). 차 번호 순열
 };
 // trace[틱][차] = [속도, from 차선, to 차선, 변경 진행, 막힘 상한 적용 0/1, 슬립스트림 적용 0/1, 횡 오차 ε, 실수 중 0/1]
 export type TraceRow = [number, number, number, number, number, number, number, number];

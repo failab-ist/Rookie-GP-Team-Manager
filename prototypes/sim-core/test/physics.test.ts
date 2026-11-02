@@ -63,3 +63,32 @@ test('차량 합계 검사는 20만 통과 (CAR §6)', () => {
   for (const car of load('../data/cars.json').cars) checkCarTotal(car.id, car.stats);
   assert.throws(() => checkCarTotal('z', { topSpeed: 6, accel: 5, grip: 5, brake: 5 }), /합계/);
 });
+
+test('1점 효과 실험 P-1: 1점당 비율 p를 4%로 주면 지금 계수와 같은 값, 5점 값은 p와 무관 (K = p / (0.1 − 0.5p))', () => {
+  for (const v of [0, 3, 5, 8, 10]) {
+    const s = { topSpeed: 5, accel: v, grip: 5, brake: v };
+    const now = carParams(s);
+    const p4 = carParams(s, 'current', { accelPoint: 0.04, brakePoint: 0.04, abScale: 1 });
+    assert.ok(Math.abs(now.A - p4.A) < 1e-9 && Math.abs(now.aBrk - p4.aBrk) < 1e-9);
+  }
+  const t = { accelPoint: 0.1, brakePoint: 0.15, abScale: 1 };
+  assert.equal(carParams({ topSpeed: 5, accel: 5, grip: 5, brake: 5 }, 'current', t).A, 50);
+  // 5 → 6에서 A가 정확히 10%, a_brk가 15% 오른다
+  const six = carParams({ topSpeed: 5, accel: 6, grip: 5, brake: 6 }, 'current', t);
+  assert.ok(Math.abs(six.A / 50 - 1.1) < 1e-12 && Math.abs(six.aBrk / 75 - 1.15) < 1e-12);
+  assert.throws(() => carParams({ topSpeed: 5, accel: 5, grip: 5, brake: 5 }, 'current', { accelPoint: 0.2, brakePoint: 0, abScale: 1 }), /1점당 비율/);
+});
+
+test('1점 효과 실험 P-2: A0 · B0 배율은 A와 a_brk만 같은 비율로 바꾼다', () => {
+  const s = { topSpeed: 5, accel: 5, grip: 5, brake: 5 };
+  const p = carParams(s, 'current', { accelPoint: 0, brakePoint: 0, abScale: 0.5 });
+  assert.deepEqual(p, { vTop: base.vTop, A: 25, vg: base.vg, aBrk: 37.5 });
+});
+
+test('QA 출발 순서 지정: qa.grid의 자리 0 차가 맨 앞에서 출발한다', () => {
+  const grid = [3, 0, 1, 2, 4, 5, 6, 7, 8, 9];
+  const r = simulate({ seed: 7, track: tracks[0], laps: 1, entries: example.entries }, {}, { grid });
+  assert.deepEqual(r.grid, grid);
+  assert.equal(Math.max(...r.frames[0]), r.frames[0][3]);
+  assert.throws(() => simulate({ seed: 7, track: tracks[0], laps: 1, entries: example.entries }, {}, { grid: [0, 0, 1, 2, 4, 5, 6, 7, 8, 9] }), /순열/);
+});
