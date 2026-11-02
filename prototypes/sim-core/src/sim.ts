@@ -2,7 +2,7 @@
 // INT = design_ssot/drafts/RACE_INTERACTION_P0_DRAFT.md (차선, 막힘, 추월, 접촉, 출발, 슬립스트림, 능력치 · 패시브 연결)
 import * as C from './config.ts';
 import { diffOrder, makeEvent, sortEvents } from './events.ts';
-import { buildCourse, carParams, DT, envelopeAt, limitAt, segAt, step, type CarParams } from './physics.ts';
+import { buildCourse, carParams, DT, envelopeAt, limitAt, segAt, step, vCorner, type CarParams } from './physics.ts';
 import { isPassive, lateralErr, pFocus, pTry, type PassiveId } from './racer.ts';
 import { createRng, shuffle, subStream, type Rng } from './rng.ts';
 import { checkTrack } from './trackCheck.ts';
@@ -77,10 +77,10 @@ type Car = {
   boostUntil: number; // OT-6 부스트가 끝나는 누적 거리
   yieldTo: number | null; // OT-7 코너 우선권을 진 상대
   yieldEnd: number; // OT-7 그 코너 끝 누적 거리
+  yieldFloor: number; // OT-7 양보 감속 하한 = 자기 코너 한계 × YIELD_MIN_RATIO
   lastMistake: number; // 혼전 실수 틱
   lastContact: number; // 접촉 시작 틱
   inMistake: boolean; // 지금 횡 오차가 혼전 실수로 뽑힌 값인지 (CT-1, CT-4)
-  cornerEntryV: number; // 지금 코너에 들어설 때 속도 (OT-7 보조 규칙)
 };
 
 // opts: 비교 실험용. 빠진 값은 DEFAULT_OPTIONS
@@ -143,10 +143,10 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     boostUntil: -Infinity,
     yieldTo: null,
     yieldEnd: -Infinity,
+    yieldFloor: 0,
     lastMistake: -Infinity,
     lastContact: -Infinity,
     inMistake: false,
-    cornerEntryV: 0,
   }));
   if (o.interaction) {
     // 2열 엇갈림 그리드 (INT §4.5). 출발 순서 0번이 맨 앞 줄 B열
@@ -296,7 +296,14 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
 
   while (finishTick.some((t) => t === null)) {
     // 끝나지 않는 레이스 방지 (서버에서 멈추지 않게). 정상 레이스는 수십 초다
-    if (++tick > ticksOf(600)) throw new Error(`레이스가 600초 안에 끝나지 않음 (시드 ${seed}, 트랙 ${track.id})`);
+    if (++tick > ticksOf(600)) {
+      // 멈춘 상황을 같이 남긴다 (QA가 시드와 상황을 보고할 수 있게)
+      const stuck = cars
+        .filter((c) => !c.finished)
+        .map((c) => `차${c.i} ${segAt(course, c.s).id} v=${c.v.toFixed(2)} 차선 ${c.from}${c.from !== c.to ? `→${c.to}` : ''} 양보 ${c.yieldTo ?? '-'}`)
+        .join('; ');
+      throw new Error(`레이스가 600초 안에 끝나지 않음 (시드 ${seed}, 트랙 ${track.id}) ${stuck}`);
+    }
     const t = tick * C.TICK_SECONDS;
     const before = cars.map((c) => c.s);
 
@@ -328,8 +335,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
           // 끝: 이긴 차 뒤 최소 간격까지 물러남, 코너 끝, 또는 이긴 차가 진 차 뒤로 완전히 처짐(더 양보할 상대가 없음. 막힘과 엮여 멈추는 것 방지)
           if (w.finished || c.s >= c.yieldEnd || c.s <= w.s - C.CAR_LENGTH - C.GAP_MIN || w.s <= c.s - C.CAR_LENGTH) c.yieldTo = null;
           else {
-            // 속도 하한 0 (INT R4-3). 출발 직후처럼 느릴 때 두 항이 모두 음수가 될 수 있다
-            const yv = Math.max(0, c.v - c.p.aBrk * C.TICK_SECONDS, w.v + (w.s - c.s - C.CAR_LENGTH - C.GAP_MIN) / C.BLOCK_TAU);
+            // 하한: 자기 코너 한계 × YIELD_MIN_RATIO (정점 전에는 가속하지 않으므로 0까지 줄이면 멈춘다, F7 · AG-P023 C)
+            const yv = Math.max(c.yieldFloor, c.v - c.p.aBrk * C.TICK_SECONDS, w.v + (w.s - c.s - C.CAR_LENGTH - C.GAP_MIN) / C.BLOCK_TAU);
             cap.set(c, Math.min(cap.get(c) ?? Infinity, yv));
           }
         }
@@ -442,12 +449,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         c.log.laneTicks[c.from]++;
         c.vPrev = c.v;
         for (let k = 0; k < C.SUBSTEPS; k++) {
-          // OT-7을 켜면 정점 전에 줄어든 속도(우선권 양보 · 막힘)를 진입 속도까지 되찾을 수 있다. 끄면 F7 그대로
-          const preApexUpTo = o.cornerPriority ? c.cornerEntryV : undefined;
-          const sBefore = c.s;
-          c.v = step(course, p, o.k, c.s, c.v, false, { cap: capV, noAccel: t < c.react, preApexUpTo });
+          c.v = step(course, p, o.k, c.s, c.v, false, { cap: capV, noAccel: t < c.react });
           c.s += c.v * DT;
-          if (course.segs.some((sg) => sg.kind === 'corner' && crossed(sBefore, c.s, sg.start))) c.cornerEntryV = c.v;
         }
         row[c.i][0] = c.v;
       }
@@ -598,6 +601,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
               if (cycle) continue;
               loser.yieldTo = winner.i;
               loser.yieldEnd = cornerStart + sg.length;
+              loser.yieldFloor = C.YIELD_MIN_RATIO * vCorner(loser.p, sg.bend);
               judge(JudgementKind.cornerPriority, [winner.i, loser.i], `winner:${winner.i}:${why}`);
             }
           }

@@ -91,6 +91,7 @@ export const DIRTY_AIR_ON = 3; // 가안, 근거 없음 (지시서 2026-11-02)
 export const BOOST = 0; // OT-6 부스트 최고속도 증가 %. 비교값 3, 5, 8 (가안, 근거 없음)
 export const BOOST_COMPARE = [3, 5, 8]; // 가안, 지시서 비교값
 export const CORNER_PRIORITY = false; // OT-7
+export const YIELD_MIN_RATIO = 0.5; // 가안, 근거 없음. OT-7 양보하는 차는 자기 코너 한계 속도의 이 비율 아래로 줄이지 않는다 (디렉터 2026-11-02)
 export const CHASE_SECONDS = 1.0; // 가안, OT-5 추격 상태 = 앞차(차선 무관)와 시간 간격 1.0 s 이내
 export const PASS_HOLD_SECONDS = 1.0; // 가안, OT-4 앞뒤가 바뀐 뒤 이 시간 유지되면 추월로 기록
 // OT-4 원인 우선순위 (가안, UNRESOLVED): 접촉 > 상대 실수 > 부스트 > 제동 구간 > 코너(접지) > 탈출(가속) > 직선(최고속도)
