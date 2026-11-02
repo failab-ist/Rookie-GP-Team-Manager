@@ -358,7 +358,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       const cap = new Map<Car, number>();
       for (const c of act) {
         // 변경 중(나가는 중)인 차가 원래 차선 앞차를 무시하는 것은 비교 스위치일 때만. 뒤차는 두 차선 모두에서 이 차에 막힌다 (R1-3)
-        // OT-2: 옆 간격이 차 폭 이상 벌어지면(변경 진행 0.75 이상) 원래 차선 앞차 상한을 푼다
+        // OT-2: 옆 간격이 차 폭 이상 벌어지면(변경 진행 = 차 폭 ÷ 차선 폭 이상) 원래 차선 앞차 상한을 푼다
         const outward = changing(c) && c.dir === 1;
         const clear = Math.abs(laneCenter(c.to) - laneCenter(c.from)) * c.prog >= o.otReleaseWidth;
         const f = outward && (!o.capWhileChanging || (o.otRelease && clear)) ? frontOf(c, c.to) : frontOf(c);

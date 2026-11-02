@@ -71,7 +71,7 @@ export const WINDOW_BACK = 8; // 가안, INT §4.1 W_b u
 export const CAR_LENGTH = 6; // 가안, INT §4.2 L_car u
 export const GAP_MIN = 2; // 가안, INT §4.2 g_min u
 export const BLOCK_TAU = 1.0; // 가안, INT §4.2 τ s
-export const CAR_WIDTH = 3; // 가안, INT §4.4 w_car u
+export const CAR_WIDTH = 1.9; // INT §4.4 w_car u. 3 → 1.9 (디렉터 결정 AG-P061 B, 2026-11-02)
 export const TRY_GAP = 10; // 가안, INT §4.3 g_try u
 export const TRY_DV_MIN = 3; // 가안, INT §4.3 Δv_min u/s
 export const DECISION_SECONDS = 0.5; // 가안, INT §4.3 T_dec s
@@ -111,8 +111,8 @@ export const YIELD_MIN_COMPARE = [0.3, 0.5, 0.7]; // 지시서 비교값 (2026-1
 export const TRY_GAP_COMPARE = [TRY_GAP * 1.5, TRY_GAP * 2]; // 지시서 비교값: 시도 시작 거리 1.5배, 2배
 export const OT_RELEASE_WIDTH_COMPARE = [CAR_WIDTH / 2]; // 지시서 비교값: 상한 해제 옆 간격 차 폭 절반
 // S1 실패 원인 분리 측정 (2026-11-02). 기본값은 CAR_WIDTH, LANE_WIDTH 그대로, 옵션 carWidth · laneWidth로만 바꾼다
-export const CAR_WIDTH_COMPARE = 1.9; // 지시서 비교값: 차 폭 1.9 u (차선 폭 4 그대로)
-export const LANE_WIDTH_COMPARE = 5; // 지시서 비교값: 차선 폭 5 u (차 폭 3, 차선 수 3 그대로)
+export const CAR_WIDTH_COMPARE = 1.9; // 지시서 비교값: 차 폭 1.9 u (차선 폭 4 그대로). AG-P061 B 뒤로 기본값 CAR_WIDTH와 같다
+export const LANE_WIDTH_COMPARE = 5; // 지시서 비교값: 차선 폭 5 u (차 폭 기본값, 차선 수 3 그대로)
 export const CHASE_SECONDS = 1.0; // 가안, OT-5 추격 상태 = 앞차(차선 무관)와 시간 간격 1.0 s 이내
 export const PASS_HOLD_SECONDS = 1.0; // 가안, OT-4 앞뒤가 바뀐 뒤 이 시간 유지되면 추월로 기록
 // OT-4 원인 우선순위 (가안, UNRESOLVED): 접촉 > 상대 실수 > 부스트 > 제동 구간 > 코너(접지) > 탈출(가속) > 직선(최고속도)
@@ -120,7 +120,7 @@ export const PASS_CAUSE_ORDER = ['contact', 'mistake', 'boost', 'brake', 'corner
 // 모두 켠 설정은 이름 붙인 묶음으로만 쓴다 (기본값 아님). 부스트는 비교값 가운데 5 (가안)
 // ---------- 접촉 규칙 정리 (AG-P039 A, AG-P040 A). 새 규칙은 모두 기본 꺼짐 ----------
 export const CT_WOBBLE = false; // CT-1
-export const LANE_SLACK = (LANE_WIDTH - CAR_WIDTH) / 2; // CT-1 차선 여유 = 0.5 u (계산값)
+export const LANE_SLACK = (LANE_WIDTH - CAR_WIDTH) / 2; // CT-1 차선 여유 (계산값, 차 폭 1.9이면 1.05 u)
 export const CT_LINE = 0; // CT-2 c_line. 켤 때 가안 0.02 (최대 2%, 근거 없음)
 export const CT_LINE_ON = 0.02; // 가안, 근거 없음 (지시서 2026-11-02)
 export const CT_CONTACT = false; // CT-3
