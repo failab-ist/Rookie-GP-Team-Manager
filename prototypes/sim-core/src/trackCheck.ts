@@ -34,6 +34,8 @@ export function checkFormat(track: Track): string[] {
     if (s.kind === 'corner' && !(s.bend > 0 && s.bend <= BEND_MAX)) errors.push(`${s.id}: 코너 bend는 (0, ${BEND_MAX}]`);
     if (s.kind !== 'straight' && s.kind !== 'corner') errors.push(`${s.id}: 종류 오류`);
     if (typeof s.passable !== 'boolean') errors.push(`${s.id}: 추월 가능 표시 누락`);
+    if (s.direction !== undefined && !['', 'L', 'R'].includes(s.direction)) errors.push(`${s.id}: 방향 칸은 L, R, 빈칸`);
+    if (s.direction && s.kind !== 'corner') errors.push(`${s.id}: 방향 칸은 코너에만`);
   }
   return errors;
 }

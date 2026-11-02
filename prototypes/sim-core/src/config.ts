@@ -118,7 +118,8 @@ export const CT_LOSS_MINOR = 0.03; // 가안, 근거 없음. CT-3 옆 접촉 두
 export const CT_ALL = { ctWobble: true, ctLine: CT_LINE_ON, ctContact: true };
 export const OT_FLOW_ALL = { desiredSpeed: 'target' as const, otRelease: true, otSpanCorner: true, dirtyAir: DIRTY_AIR_ON, boost: 5, cornerPriority: true };
 export const DEFAULT_INNER_LANE = 0; // 가안, 근거 없음. 코너 방향 데이터가 없어 모든 코너 안쪽 = 0번 (디렉터 2026-11-02)
-// 트랙 데이터의 innerLane은 차선 규약 A(진행 방향 왼쪽 끝 = 0, L 코너 안쪽 0 · R 코너 안쪽 2, DIRECTION 초안 R-1, Q-78 가안)로 읽는다
+// 트랙 데이터의 innerLane과 방향 칸 direction은 차선 규약 A(진행 방향 왼쪽 끝 = 0, L 코너 안쪽 0 · R 코너 안쪽 오른쪽 끝 = 2, DIRECTION 초안 R-1, Q-78 가안)로 읽는다.
+// 안쪽 차선 = innerLane → 방향 칸(L 0, R 차선 수 − 1) → 둘 다 비면 DEFAULT_INNER_LANE (AG-P045 A)
 
 // ---------- 모티브 트랙 (PROTO_TRACKS_MOTIF_DRAFT.md, PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md). 새 규칙은 기본 꺼짐 ----------
 export const BEND_MAX = 1.5; // MOTIF §5.2 bend (0.6, 1.5]. CAR §4.1은 코너 bend (0, 1] → CONFLICT (헤어핀 1.5를 받으려고 MOTIF 범위를 씀)

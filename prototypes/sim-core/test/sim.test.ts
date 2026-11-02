@@ -112,3 +112,19 @@ test('부스트 구간 모드: 부스트는 구간(M1-S4) 안에서만 최고속
   );
   assert.ok(above > 0);
 });
+
+test('코너 방향 칸: R은 innerLane 2, L은 0, 빈칸은 기본값과 같은 결과 (AG-P045 A, 차선 규약 A)', async () => {
+  const { MOTIF_ALL } = await import('../src/config.ts');
+  const M1 = JSON.parse(readFileSync(new URL('../data/tracks/motif/M1-LB.json', import.meta.url), 'utf8'));
+  const withCorners = (f: (s: Record<string, unknown>) => Record<string, unknown>) => ({ ...M1, segments: M1.segments.map((s: Record<string, unknown>) => (s.kind === 'corner' ? f(s) : s)) });
+  const run = (track: unknown) => {
+    const r = simulate(input({ track: track as RaceInput['track'] }), MOTIF_ALL);
+    return JSON.stringify({ ...r, header: null });
+  };
+  const noField = withCorners(({ direction, ...s }) => s);
+  assert.equal(run(M1), run(noField)); // 빈칸 = 필드 없음 = 기본 0번
+  assert.equal(run(withCorners((s) => ({ ...s, direction: 'R' }))), run(withCorners((s) => ({ ...s, direction: '', innerLane: 2 }))));
+  assert.equal(run(withCorners((s) => ({ ...s, direction: 'L' }))), run(M1)); // L = 0 = 기본값
+  assert.notEqual(run(withCorners((s) => ({ ...s, direction: 'R' }))), run(M1));
+  assert.throws(() => simulate(input({ track: withCorners((s) => ({ ...s, direction: 'X' })) })), /방향 칸/);
+});

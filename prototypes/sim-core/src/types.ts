@@ -38,6 +38,7 @@ export type TrackSegment = {
   width: number;
   passable: boolean; // 추월 가능 표시
   innerLane?: number; // 코너 안쪽 차선. 코너 방향 데이터가 없어 비워 두면 config DEFAULT_INNER_LANE (가안)
+  direction?: 'L' | 'R' | ''; // 코너 방향 (DIRECTION 초안 R-2 표). 빈칸이면 DEFAULT_INNER_LANE. innerLane이 있으면 innerLane이 먼저
 };
 
 export type Track = {

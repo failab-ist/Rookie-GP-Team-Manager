@@ -18,6 +18,7 @@ import {
   type RaceOptions,
   type RaceResult,
   type TraceRow,
+  type TrackSegment,
 } from './types.ts';
 
 export const DEFAULT_OPTIONS: RaceOptions = {
@@ -278,6 +279,9 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
   const boostDetect = zonePrev ? zonePrev.start : boostSeg.start;
   const boostLen = zone && zonePrev ? boostZoneLength(zone.length, zonePrev.bend, zone.next!.bend, baseP) : boostSeg.length;
   if (!(boostLen > 0)) throw new Error(`트랙 ${track.id}: 부스트 구간 길이 ${boostLen} ≤ 0 (F-B2)`);
+  // 코너 안쪽 차선: innerLane → 방향 칸 (차선 규약 A: L = 0, R = 오른쪽 끝) → 기본값 (AG-P045 A)
+  const innerOf = (sg: TrackSegment | null | undefined) =>
+    sg?.innerLane ?? (sg?.direction === 'L' ? 0 : sg?.direction === 'R' ? o.laneCount - 1 : C.DEFAULT_INNER_LANE);
   const crossed = (from: number, to: number, at: number) => Math.floor((from - at) / L) < Math.floor((to - at) / L);
   // OT-4 추월 기록: 앞뒤가 바뀐 뒤 PASS_HOLD_SECONDS 유지되면 기록
   const pendingPasses: { tick: number; passer: Car; passed: Car; cause: string; attempt: boolean; where: { lap: number; segment: string } }[] = [];
@@ -597,7 +601,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
               if (d === c || shareLane(c, d) || Math.abs(c.from - d.from) !== 1 || Math.abs(c.s - d.s) >= C.CAR_LENGTH || c.yieldTo === d.i || d.yieldTo === c.i) continue;
               const cAhead = c.s > d.s - C.CAR_LENGTH / 2; // 앞 범퍼가 상대 차 중심보다 앞
               const dAhead = d.s > c.s - C.CAR_LENGTH / 2;
-              const inner = sg.innerLane ?? C.DEFAULT_INNER_LANE;
+              const inner = innerOf(sg);
               let winner: Car;
               let why: string;
               if (cAhead !== dAhead) {
@@ -733,7 +737,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       passiveEvent(c, `activate:${c.passive}`);
       if (c.passive === 'corner-architect') {
         // apex 선점: 다음 코너 안쪽 차선으로 (코너 방향 데이터가 없어 기본 0번, 가안). 안쪽이 막혀 있으면 효과 반감
-        const inner = segAt(course, c.s).next?.innerLane ?? C.DEFAULT_INNER_LANE;
+        const inner = innerOf(segAt(course, c.s).next);
         const blocked = c.from !== inner && cars.some((d) => d !== c && !d.finished && occupies(d, inner) && d.s >= c.s && d.s <= c.s + C.WINDOW_FRONT);
         ps.aMul = 1 + (C.ARCHITECT_A_MUL - 1) * (blocked ? C.ARCHITECT_BLOCKED_SCALE : 1);
         if (blocked) passiveEvent(c, 'T-B-inner');
@@ -742,7 +746,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     // 코너 설계자 발동 중: 안쪽 차선으로 한 칸씩, 창 검사 없이 (겹치면 접촉 규칙)
     if (c.passive === 'corner-architect' && ps.state === 'active' && !changing(c) && !c.ot && canStartChange(c)) {
       const cur = segAt(course, c.s);
-      const inner = (cur.kind === 'corner' ? cur.innerLane : cur.next?.innerLane) ?? C.DEFAULT_INNER_LANE;
+      const inner = innerOf(cur.kind === 'corner' ? cur : cur.next);
       if (c.from !== inner) startChange(c, c.from + Math.sign(inner - c.from), true);
     }
   }
