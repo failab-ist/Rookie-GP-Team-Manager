@@ -83,6 +83,18 @@ test('추월 5단계 흐름 묶음(OT_FLOW_ALL): 같은 입력 두 번이 바이
   }
 });
 
+test('S1 진단 스위치(tryGap, otReleaseWidth): 기본값을 그대로 넣으면 옵션을 뺀 결과와 같고, 0 이하는 거부한다', async () => {
+  const { OT_FLOW_ALL, TRY_GAP, CAR_WIDTH } = await import('../src/config.ts');
+  const input = { seed: 5, track: tracks[1], laps: 3, entries: lineup };
+  const opts = { ...OT_FLOW_ALL, slipstream: true };
+  const qa = { trace: true };
+  assert.deepEqual(simulate(input, { ...opts, tryGap: TRY_GAP, otReleaseWidth: CAR_WIDTH }, qa), simulate(input, opts, qa));
+  for (const bad of [0, -1, NaN]) {
+    assert.throws(() => simulate(input, { tryGap: bad }), /g_try/);
+    assert.throws(() => simulate(input, { otReleaseWidth: bad }), /해제/);
+  }
+});
+
 test('접촉 규칙 묶음(CT_ALL): 결정론, 음수 속도 없음, 접촉 기록은 종류:책임 기준:원인 제공자 형식', async () => {
   const { OT_FLOW_ALL, CT_ALL, LANE_SLACK } = await import('../src/config.ts');
   for (const track of tracks) {

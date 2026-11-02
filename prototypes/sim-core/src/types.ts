@@ -148,6 +148,8 @@ export type RaceOptions = {
   blockCap: boolean; // 막힘 상한 (진단 비교용, 기본 켬)
   otSpanStraights: number; // OT-3 시도 구간 직선 수 (진단 비교용, 기본 1)
   yieldMinRatio: number; // OT-7 양보 감속 하한 비율 (자기 코너 한계 × 이 값)
+  tryGap: number; // 시도 시작 거리 g_try u (INT §4.3, 진단 비교용, 기본 10)
+  otReleaseWidth: number; // OT-2 상한 해제 옆 간격 u (진단 비교용, 기본 차 폭). otRelease가 켜져 있을 때만 쓴다
   boostZone: boolean; // OT-6 구간 모드 (트랙 데이터 구간 · 앞 코너 진입 감지 · E1 고정 끝 · 슬립스트림과 큰 값만)
   // 접촉 규칙 정리 스위치 (AG-P039 A, AG-P040 A, 기본 꺼짐)
   ctWobble: boolean; // CT-1 평소 횡 오차를 차선 여유 안으로 (실수 때만 넘음)

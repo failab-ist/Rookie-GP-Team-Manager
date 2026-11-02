@@ -44,6 +44,8 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   blockCap: C.BLOCK_CAP_ON,
   otSpanStraights: C.OT_SPAN_STRAIGHTS,
   yieldMinRatio: C.YIELD_MIN_RATIO,
+  tryGap: C.TRY_GAP,
+  otReleaseWidth: C.CAR_WIDTH,
   boostZone: C.BOOST_ZONE,
   ctWobble: C.CT_WOBBLE,
   ctLine: C.CT_LINE,
@@ -99,6 +101,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
   const baseP = carParams({ topSpeed: C.BASE_CAR_STAT, accel: C.BASE_CAR_STAT, grip: C.BASE_CAR_STAT, brake: C.BASE_CAR_STAT }, undefined, o); // 기준 차 코너 검사 · 부스트 구간 (지금까지와 같이 기본 가속 공식)
   validate(input, o.k, qa.start ? qa.start.length : C.ENTRY_COUNT, baseP);
   if (!(o.latSpeed > 0)) throw new Error('횡 속도 v_lat은 0보다 커야 한다 (INT §4.1)');
+  if (!(o.tryGap > 0)) throw new Error('시도 시작 거리 g_try는 0보다 커야 한다 (INT §4.3)');
+  if (!(o.otReleaseWidth > 0)) throw new Error('상한 해제 옆 간격은 0보다 커야 한다 (OT-2)');
   if (!(o.slipRatio >= 0)) throw new Error('슬립스트림 비율 s_ss는 0 이상 (INT §4.6)');
   if (!(Number.isInteger(o.laneCount) && o.laneCount >= 3)) throw new Error('차선 수는 3 이상 정수 (출발 그리드가 0번, 2번 차선을 쓴다)');
   const { seed, track, laps, entries } = input;
@@ -351,7 +355,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         // 변경 중(나가는 중)인 차가 원래 차선 앞차를 무시하는 것은 비교 스위치일 때만. 뒤차는 두 차선 모두에서 이 차에 막힌다 (R1-3)
         // OT-2: 옆 간격이 차 폭 이상 벌어지면(변경 진행 0.75 이상) 원래 차선 앞차 상한을 푼다
         const outward = changing(c) && c.dir === 1;
-        const clear = Math.abs(laneCenter(c.to) - laneCenter(c.from)) * c.prog >= C.CAR_WIDTH;
+        const clear = Math.abs(laneCenter(c.to) - laneCenter(c.from)) * c.prog >= o.otReleaseWidth;
         const f = outward && (!o.capWhileChanging || (o.otRelease && clear)) ? frontOf(c, c.to) : frontOf(c);
         if (f && o.blockCap) cap.set(c, blockCap(f.v, gapTo(c, f)));
         // OT-7 우선권을 진 차: 이긴 차 뒤 최소 간격까지 물러난다 (제동 능력 안에서)
@@ -430,7 +434,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         const g = gapTo(c, f);
         const p = effParams(c);
         const want = o.desiredSpeed === 'target' ? Math.min(p.vTop, limitAt(course, p, o.k, c.s), envelopeAt(course, p, c.s)) : desired.get(c)!;
-        if (g > C.TRY_GAP || want - f.v < C.TRY_DV_MIN) continue;
+        if (g > o.tryGap || want - f.v < C.TRY_DV_MIN) continue;
         // 코너 설계자 반대급부: 발동 끝 4 s 안 직선에서 시도 안 함 (T-B 직선 미시도)
         if (c.passive === 'corner-architect' && t - c.ps.lastEnd <= C.ARCHITECT_NO_TRY_SECONDS && g <= C.ARCHITECT_NO_TRY_GAP) {
           passiveEvent(c, 'T-B-straight');
