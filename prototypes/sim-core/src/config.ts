@@ -110,6 +110,9 @@ export const YIELD_MIN_COMPARE = [0.3, 0.5, 0.7]; // 지시서 비교값 (2026-1
 // S1 막힘 상한 진단 비교값 (2026-11-02). 기본값은 기존 TRY_GAP, CAR_WIDTH 그대로, 옵션 tryGap · otReleaseWidth로만 바꾼다
 export const TRY_GAP_COMPARE = [TRY_GAP * 1.5, TRY_GAP * 2]; // 지시서 비교값: 시도 시작 거리 1.5배, 2배
 export const OT_RELEASE_WIDTH_COMPARE = [CAR_WIDTH / 2]; // 지시서 비교값: 상한 해제 옆 간격 차 폭 절반
+// S1 실패 원인 분리 측정 (2026-11-02). 기본값은 CAR_WIDTH, LANE_WIDTH 그대로, 옵션 carWidth · laneWidth로만 바꾼다
+export const CAR_WIDTH_COMPARE = 1.9; // 지시서 비교값: 차 폭 1.9 u (차선 폭 4 그대로)
+export const LANE_WIDTH_COMPARE = 5; // 지시서 비교값: 차선 폭 5 u (차 폭 3, 차선 수 3 그대로)
 export const CHASE_SECONDS = 1.0; // 가안, OT-5 추격 상태 = 앞차(차선 무관)와 시간 간격 1.0 s 이내
 export const PASS_HOLD_SECONDS = 1.0; // 가안, OT-4 앞뒤가 바뀐 뒤 이 시간 유지되면 추월로 기록
 // OT-4 원인 우선순위 (가안, UNRESOLVED): 접촉 > 상대 실수 > 부스트 > 제동 구간 > 코너(접지) > 탈출(가속) > 직선(최고속도)

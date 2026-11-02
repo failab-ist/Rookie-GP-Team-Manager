@@ -95,6 +95,17 @@ test('S1 진단 스위치(tryGap, otReleaseWidth): 기본값을 그대로 넣으
   }
 });
 
+test('측정용 차 폭 · 차선 폭(carWidth, laneWidth): 기본값을 넣으면 옵션을 뺀 결과와 같고, 차 폭만 주면 해제 간격도 차 폭, 차선 폭보다 넓은 차는 거부한다', async () => {
+  const { OT_FLOW_ALL, CT_ALL, CAR_WIDTH, LANE_WIDTH } = await import('../src/config.ts');
+  const input = { seed: 5, track: tracks[1], laps: 3, entries: lineup };
+  const opts = { ...OT_FLOW_ALL, ...CT_ALL, slipstream: true };
+  const qa = { trace: true };
+  assert.deepEqual(simulate(input, { ...opts, carWidth: CAR_WIDTH, laneWidth: LANE_WIDTH }, qa), simulate(input, opts, qa));
+  assert.equal(simulate(input, { ...opts, carWidth: 1.9 }).header.options.otReleaseWidth, 1.9);
+  assert.throws(() => simulate(input, { carWidth: 5 }), /차 폭/);
+  assert.throws(() => simulate(input, { carWidth: 0 }), /차 폭|해제/); // 해제 간격 기본값이 차 폭이라 그 검사가 먼저 걸린다
+});
+
 test('접촉 규칙 묶음(CT_ALL): 결정론, 음수 속도 없음, 접촉 기록은 종류:책임 기준:원인 제공자 형식', async () => {
   const { OT_FLOW_ALL, CT_ALL, LANE_SLACK } = await import('../src/config.ts');
   for (const track of tracks) {

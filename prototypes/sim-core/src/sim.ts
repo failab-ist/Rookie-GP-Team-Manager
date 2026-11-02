@@ -46,6 +46,8 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   yieldMinRatio: C.YIELD_MIN_RATIO,
   tryGap: C.TRY_GAP,
   otReleaseWidth: C.CAR_WIDTH,
+  carWidth: C.CAR_WIDTH,
+  laneWidth: C.LANE_WIDTH,
   boostZone: C.BOOST_ZONE,
   ctWobble: C.CT_WOBBLE,
   ctLine: C.CT_LINE,
@@ -62,7 +64,6 @@ export function rearFix(rear: { s: number; v: number }, front: { s: number; v: n
 }
 
 const ticksOf = (seconds: number) => Math.round(seconds / C.TICK_SECONDS);
-const laneCenter = (lane: number) => C.LANE_WIDTH / 2 + C.LANE_WIDTH * lane; // INT R1-6 (2, 6, 10 u)
 
 type Car = {
   i: number;
@@ -97,12 +98,16 @@ type Car = {
 
 // opts: 비교 실험용. 빠진 값은 DEFAULT_OPTIONS
 export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: QaHooks = {}): RaceResult {
-  const o: RaceOptions = { ...DEFAULT_OPTIONS, ...opts };
+  // 상한 해제 옆 간격은 따로 주지 않으면 차 폭 (OT-2 정의: 옆 간격이 차 폭 이상)
+  const o: RaceOptions = { ...DEFAULT_OPTIONS, otReleaseWidth: opts.carWidth ?? DEFAULT_OPTIONS.otReleaseWidth, ...opts };
   const baseP = carParams({ topSpeed: C.BASE_CAR_STAT, accel: C.BASE_CAR_STAT, grip: C.BASE_CAR_STAT, brake: C.BASE_CAR_STAT }, undefined, o); // 기준 차 코너 검사 · 부스트 구간 (지금까지와 같이 기본 가속 공식)
   validate(input, o.k, qa.start ? qa.start.length : C.ENTRY_COUNT, baseP);
   if (!(o.latSpeed > 0)) throw new Error('횡 속도 v_lat은 0보다 커야 한다 (INT §4.1)');
   if (!(o.tryGap > 0)) throw new Error('시도 시작 거리 g_try는 0보다 커야 한다 (INT §4.3)');
   if (!(o.otReleaseWidth > 0)) throw new Error('상한 해제 옆 간격은 0보다 커야 한다 (OT-2)');
+  if (!(o.carWidth > 0 && o.laneWidth >= o.carWidth)) throw new Error('차 폭은 0보다 크고 차선 폭 이하 (INT §4.1, §4.4)');
+  const laneCenter = (lane: number) => o.laneWidth / 2 + o.laneWidth * lane; // INT R1-6 (2, 6, 10 u)
+  const laneSlack = (o.laneWidth - o.carWidth) / 2; // CT-1 차선 여유 (config LANE_SLACK과 같은 계산)
   if (!(o.slipRatio >= 0)) throw new Error('슬립스트림 비율 s_ss는 0 이상 (INT §4.6)');
   if (!(Number.isInteger(o.laneCount) && o.laneCount >= 3)) throw new Error('차선 수는 3 이상 정수 (출발 그리드가 0번, 2번 차선을 쓴다)');
   const { seed, track, laps, entries } = input;
@@ -376,7 +381,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         if (!changing(c)) continue;
         if (c.dir === 1 && !c.ignoreWindow && windowBusy(c, c.to)) revert(c);
         const vLat = o.latSpeed * (c.passive === 'gap-hunter' && c.ps.state === 'active' ? C.GAP_HUNTER_LAT_MUL : 1);
-        c.prog += (c.dir * vLat * C.TICK_SECONDS) / C.LANE_WIDTH;
+        c.prog += (c.dir * vLat * C.TICK_SECONDS) / o.laneWidth;
         if (c.prog >= 1) c.from = c.to;
         if (c.prog <= 0) c.to = c.from;
         if (!changing(c)) {
@@ -496,7 +501,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
           const key = Math.min(a.i, b.i) * 64 + Math.max(a.i, b.i);
           const st = contactPairs.get(key) ?? { on: false, offTicks: 0, sinceFix: 0, releasedAt: -Infinity };
           contactPairs.set(key, st);
-          const touching = Math.abs(a.s - b.s) - C.CAR_LENGTH < 0 && Math.abs(y(a) - y(b)) < C.CAR_WIDTH;
+          const touching = Math.abs(a.s - b.s) - C.CAR_LENGTH < 0 && Math.abs(y(a) - y(b)) < o.carWidth;
           if (touching && !st.on) {
             st.on = true;
             st.offTicks = 0;
@@ -581,7 +586,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
           if (solverActive(c)) mul *= C.SOLVER_EPS_MUL;
           const e = (2 * rng() - 1) * lateralErr(stats) * mul;
           // CT-1: 평소 흔들림은 차선 여유 안으로 자른다. 실수일 때만 넘는다
-          c.eps = o.ctWobble && !mistake ? Math.max(-C.LANE_SLACK, Math.min(C.LANE_SLACK, e)) : e;
+          c.eps = o.ctWobble && !mistake ? Math.max(-laneSlack, Math.min(laneSlack, e)) : e;
           c.inMistake = mistake;
         }
         if (c.passive) updatePassive(c, t);
