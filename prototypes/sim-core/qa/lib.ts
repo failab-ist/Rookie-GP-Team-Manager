@@ -132,6 +132,9 @@ export type RaceSummary = {
   passCauses: Record<string, number>;
   ticks: number;
   overtakeSegs: string[];
+  overtakeSegsS1: string[]; // 정식 시도 중 앞지른 추월(OT-4)의 구간
+  s1Segs: string[]; // 정식 시도 S1 성공 판정(종류 7)의 구간
+  firstSeconds: number; // 1위 완주 시각
 };
 const countBy = (keys: string[]) => keys.reduce<Record<string, number>>((a, k) => ((a[k] = (a[k] ?? 0) + 1), a), {});
 export const summarize = (r: ReturnType<typeof simulate>): RaceSummary => ({
@@ -148,6 +151,9 @@ export const summarize = (r: ReturnType<typeof simulate>): RaceSummary => ({
   contacts: r.carStats.reduce((a, c) => a + c.contacts, 0) / 2,
   ticks: r.ticks,
   overtakeSegs: r.events.filter((e) => e.kind === 3).map((e) => e.segment),
+  overtakeSegsS1: r.events.filter((e) => e.kind === 3 && e.cause?.includes(":S1:")).map((e) => e.segment),
+  s1Segs: r.judgements.filter((j) => j.kind === 7).map((j) => j.segment),
+  firstSeconds: Math.min(...r.events.filter((e) => e.kind === 9).map((e) => e.tick)) * r.header.tickSeconds,
 });
 const origCache2 = new Map<string, RaceSummary | null>();
 export const origRun = (opts: Partial<RaceOptions>, track: Track, seed: number) => {
