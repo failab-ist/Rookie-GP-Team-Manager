@@ -1,22 +1,22 @@
 {
-  "_note": "PROTO_TRACKS_MOTIF_DRAFT.md §7.2 표(Lreal, Lc_real, bend) × 축소안 L-B ρ 1.8 (§8.1, S 1.00) 그대로 (가안). 코너 방향 칸 direction(L/R)은 DIRECTION 초안 R-2 표가 비어 있어(SOURCE ACCESS ISSUE) 빈칸으로 둔다 → 기본 0번. 채우면 차선 규약 A(L 안쪽 0, R 안쪽 2)로 읽는다. 부스트 구간은 DIRECTION 초안 §4 Z1 (가안)",
+  "_note": "PROTO_TRACKS_MOTIF_DRAFT.md §7.2 표(Lreal, Lc_real, bend) × 축소안 L-B ρ 1.8 (§8.1, S 1.00) 그대로 (가안). 코너 방향 칸 direction(L/R)은 디렉터 지시 2026-11-02(AG-P045 A, 모티브라 우리 트랙에 맞게 정함) 값, 축소안 셋 모두 같다. 차선 규약 A(L 안쪽 0, R 안쪽 2, Q-78 가안)로 읽는다. 부스트 구간은 DIRECTION 초안 §4 Z1 (가안)",
   "id": "M2-LB",
   "boostZone": "M2-S6",
   "segments": [
     {"id":"M2-S1","kind":"straight","length":162,"bend":0,"width":12,"passable":true},
-    {"id":"M2-C1","kind":"corner","length":72,"bend":0.75,"direction":"","width":12,"passable":false},
+    {"id":"M2-C1","kind":"corner","length":72,"bend":0.75,"direction":"R","width":12,"passable":false},
     {"id":"M2-S2","kind":"straight","length":144,"bend":0,"width":12,"passable":true},
-    {"id":"M2-C2","kind":"corner","length":63,"bend":0.9,"direction":"","width":12,"passable":false},
-    {"id":"M2-C3","kind":"corner","length":54,"bend":0.7,"direction":"","width":12,"passable":false},
+    {"id":"M2-C2","kind":"corner","length":63,"bend":0.9,"direction":"L","width":12,"passable":false},
+    {"id":"M2-C3","kind":"corner","length":54,"bend":0.7,"direction":"R","width":12,"passable":false},
     {"id":"M2-S3","kind":"straight","length":180,"bend":0,"width":12,"passable":true},
-    {"id":"M2-C4","kind":"corner","length":72,"bend":1.2,"direction":"","width":12,"passable":false},
+    {"id":"M2-C4","kind":"corner","length":72,"bend":1.2,"direction":"L","width":12,"passable":false},
     {"id":"M2-S4","kind":"straight","length":126,"bend":0,"width":12,"passable":true},
-    {"id":"M2-C5","kind":"corner","length":54,"bend":0.8,"direction":"","width":12,"passable":false},
+    {"id":"M2-C5","kind":"corner","length":54,"bend":0.8,"direction":"R","width":12,"passable":false},
     {"id":"M2-S5","kind":"straight","length":144,"bend":0,"width":12,"passable":true},
-    {"id":"M2-C6","kind":"corner","length":72,"bend":1.5,"direction":"","width":12,"passable":false},
+    {"id":"M2-C6","kind":"corner","length":72,"bend":1.5,"direction":"R","width":12,"passable":false},
     {"id":"M2-S6","kind":"straight","length":414,"bend":0,"width":12,"passable":true},
-    {"id":"M2-C7","kind":"corner","length":63,"bend":0.7,"direction":"","width":12,"passable":false},
+    {"id":"M2-C7","kind":"corner","length":63,"bend":0.7,"direction":"L","width":12,"passable":false},
     {"id":"M2-S7","kind":"straight","length":108,"bend":0,"width":12,"passable":true},
-    {"id":"M2-C8","kind":"corner","length":72,"bend":0.85,"direction":"","width":12,"passable":false}
+    {"id":"M2-C8","kind":"corner","length":72,"bend":0.85,"direction":"R","width":12,"passable":false}
   ]
 }

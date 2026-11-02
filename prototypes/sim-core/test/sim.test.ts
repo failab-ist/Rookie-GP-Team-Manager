@@ -121,10 +121,11 @@ test('코너 방향 칸: R은 innerLane 2, L은 0, 빈칸은 기본값과 같은
     const r = simulate(input({ track: track as RaceInput['track'] }), MOTIF_ALL);
     return JSON.stringify({ ...r, header: null });
   };
+  const blank = withCorners((s) => ({ ...s, direction: '' }));
   const noField = withCorners(({ direction, ...s }) => s);
-  assert.equal(run(M1), run(noField)); // 빈칸 = 필드 없음 = 기본 0번
+  assert.equal(run(blank), run(noField)); // 빈칸 = 필드 없음 = 기본 0번
   assert.equal(run(withCorners((s) => ({ ...s, direction: 'R' }))), run(withCorners((s) => ({ ...s, direction: '', innerLane: 2 }))));
-  assert.equal(run(withCorners((s) => ({ ...s, direction: 'L' }))), run(M1)); // L = 0 = 기본값
-  assert.notEqual(run(withCorners((s) => ({ ...s, direction: 'R' }))), run(M1));
+  assert.equal(run(withCorners((s) => ({ ...s, direction: 'L' }))), run(blank)); // L = 0 = 기본값
+  assert.notEqual(run(withCorners((s) => ({ ...s, direction: 'R' }))), run(blank));
   assert.throws(() => simulate(input({ track: withCorners((s) => ({ ...s, direction: 'X' })) })), /방향 칸/);
 });
