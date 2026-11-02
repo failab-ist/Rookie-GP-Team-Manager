@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-11-02 — 결정 기록 반영 (AG-P036~P044, P048, P054)
+
+- INT 초안(`RACE_INTERACTION_P0_DRAFT.md`): §12 결정 기록 추가 (AG-P036 · P037 · P038 · P039 · P042 · P044 · P054), R 목표 표시 (§4.7 · §7 · Q-55, 값 유지)
+- RACER 초안(`RACER_STATS_PASSIVES_DRAFT.md`): §11 결정 기록 추가 (AG-P040 · P041 · P043)
+- CAR 초안(`CAR_STATS_TRACKS_PROTO_DRAFT.md`): §14 결정 기록 추가 (AG-P048), §12.1 판정에 표시
+- OPEN(`OPEN.md`): O-001 · O-002 · O-003 · O-101 단서 칸에 결정 번호 추가 (상태는 OPEN 유지)
+
 ## 2026-11-01 — 이름 표기 정정
 
 - 이름 표기를 기획서 v0.5 §16에 맞춤: 한글 `레이서 키우기`, 영문 `Rookie GP: Team Manager`(가제) (User 2026-11-01) → `SPEC_INDEX.md` §BRAND, `GLOSSARY.md`
