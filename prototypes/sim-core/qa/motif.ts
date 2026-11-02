@@ -152,10 +152,12 @@ if (part === 'share') {
   const ts = MOTIFS.map((m) => trackOf(m, 'LB'));
   const blocks = ts.flatMap((t) => SEEDS.map((s) => ({ t, s })));
   const rank = RACER_SET.map(() => CAR_SET.map(() => [] as (number | null)[]));
+  const slotOfBlock: number[] = []; // 테스트 차 출발 자리 (출발 순서는 시드로만 정해져 모든 조합에서 같다)
   RACER_SET.forEach((rc, j) =>
     CAR_SET.forEach(([, cs], i) => {
       rank[j][i] = blocks.map(({ t, s }) => {
         const r = tryRace(t, s, testCar(cs, rc), FINAL);
+        if (r) slotOfBlock[blocks.indexOf(blocks.find((b) => b.t === t && b.s === s)!)] = r.grid.indexOf(0);
         return r ? r.finishOrder.indexOf(0) + 1 : null;
       });
     }),
@@ -184,6 +186,10 @@ if (part === 'share') {
   const blockMean = keptIdx.map((k) => mean(RACER_SET.flatMap((_, j) => CAR_SET.map((_, i) => rank[j][i][k] as number))));
   const ssBlock = I * J * blockMean.reduce((s, v) => s + (v - mu) ** 2, 0);
   const ssErr = ssTotal - ssCar - ssRacer - ssInt - ssBlock;
+  // 블록 몫 가운데 테스트 차 출발 자리가 설명하는 몫: 블록 평균을 출발 자리로 묶은 사이 제곱합
+  const slotGroups = new Map<number, number[]>();
+  keptIdx.forEach((k, bi) => slotGroups.set(slotOfBlock[k], [...(slotGroups.get(slotOfBlock[k]) ?? []), blockMean[bi]]));
+  const ssSlot = I * J * [...slotGroups.values()].reduce((acc, g) => acc + g.length * (mean(g) - mu) ** 2, 0);
   const pc = (v: number) => `${f((v / ssTotal) * 100, 2)}%`;
 
   out('# 차와 레이서 비중 (L-B 3트랙, MOTIF_ALL, 확인용 시드)');
@@ -204,6 +210,8 @@ if (part === 'share') {
         ['레이서 주효과', f(ssRacer, 1), pc(ssRacer)],
         ['차 × 레이서 상호작용', f(ssInt, 1), pc(ssInt)],
         ['(트랙, 시드) 블록', f(ssBlock, 1), pc(ssBlock)],
+        ['└ 그중 테스트 차 출발 자리', f(ssSlot, 1), `${pc(ssSlot)} (블록 몫의 ${f((ssSlot / ssBlock) * 100, 1)}%)`],
+        ['└ 그 밖의 (트랙, 시드)', f(ssBlock - ssSlot, 1), pc(ssBlock - ssSlot)],
         ['나머지 (레이스 안 변동)', f(ssErr, 1), pc(ssErr)],
         ['전체', f(ssTotal, 1), '100%'],
       ],

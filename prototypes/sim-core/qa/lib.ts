@@ -13,9 +13,9 @@ import {
   M18_OVERTAKE_RACE_SHARE,
   QA_DELTA,
 } from '../src/config.ts';
-import { at, buildCourse, carParams, runSolo, type CarParams } from '../src/physics.ts';
+import { at, buildCourse, carParams, NO_TUNE, runSolo, type CarParams, type StatTune } from '../src/physics.ts';
 import { simulate } from '../src/sim.ts';
-import type { CarStats, Entry, RaceOptions, Track } from '../src/types.ts';
+import type { CarStats, Entry, QaHooks, RaceOptions, Track } from '../src/types.ts';
 
 export const load = (p: string) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 export const TRACKS: Track[] = ['T1', 'T2', 'T3'].map((t) => load(`../data/tracks/${t}.json`));
@@ -68,8 +68,8 @@ export function measureLap(track: Track, p: CarParams, k: number): Measured {
 }
 
 // 능력치 +Δ의 1바퀴 단축률 E (트랙 평균)와 가속 R (INT §4.7, AG-P029 A)
-export function lapGains(tracks: Track[], formula: 'current' | 'AC1' = 'current', k = EXIT_LIMIT_RELAX) {
-  const lap = (stats: CarStats) => tracks.map((t) => measureLap(t, carParams(stats, formula), k).lapTime);
+export function lapGains(tracks: Track[], formula: 'current' | 'AC1' = 'current', k = EXIT_LIMIT_RELAX, tune: StatTune = NO_TUNE) {
+  const lap = (stats: CarStats) => tracks.map((t) => measureLap(t, carParams(stats, formula, tune), k).lapTime);
   const base = lap(BASE);
   const E = Object.fromEntries(
     STATS.map((s) => {
@@ -92,15 +92,15 @@ TRACKS.forEach(registerTrack);
 
 export const NPC = { overtake: 5, control: 5, focus: 5 }; // 상대 레이서 고정 프로필 (RACER_STATS_PASSIVES_DRAFT.md:269 가안, 패시브 없음)
 const toStats = (a: number[]): CarStats => ({ topSpeed: a[0], accel: a[1], grip: a[2], brake: a[3] });
-const opponents = (): Entry[] =>
+export const opponents = (): Entry[] =>
   L2_OPPONENTS.map((o, i) => ({ racer: { id: `npc-${i + 1}`, stats: NPC, passiveId: null }, car: { id: `O${i + 1}`, stats: toStats(o) } }));
-export const race = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>) =>
-  simulate({ seed, track, laps: 3, entries: [test, ...opponents()] }, { k: EXIT_LIMIT_RELAX, ...opts });
+export const race = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>, qa: QaHooks = {}) =>
+  simulate({ seed, track, laps: 3, entries: [test, ...opponents()] }, { k: EXIT_LIMIT_RELAX, ...opts }, qa);
 // 멈춘 레이스(600초 안에 안 끝남): 고치지 않고 기록하고 집계에서 뺀다 (디렉터 2026-11-02)
 export const STUCK: string[] = [];
-export const tryRace = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>) => {
+export const tryRace = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>, qa: QaHooks = {}) => {
   try {
-    return race(track, seed, test, opts);
+    return race(track, seed, test, opts, qa);
   } catch (e) {
     STUCK.push(`${(e as Error).message} | 테스트 차 ${JSON.stringify(test.car.stats)} 레이서 ${JSON.stringify(test.racer.stats)} | 설정 ${JSON.stringify(opts)}`);
     return null;
