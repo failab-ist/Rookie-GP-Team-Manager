@@ -145,6 +145,8 @@ export type RaceOptions = {
   dirtyAir: number; // OT-5 추격 상태 접지 한계 감소 % (0 = 꺼짐)
   boost: number; // OT-6 부스트 구간 최고속도 증가 % (0 = 꺼짐)
   cornerPriority: boolean; // OT-7 코너 우선권
+  blockCap: boolean; // 막힘 상한 (진단 비교용, 기본 켬)
+  otSpanStraights: number; // OT-3 시도 구간 직선 수 (진단 비교용, 기본 1)
   yieldMinRatio: number; // OT-7 양보 감속 하한 비율 (자기 코너 한계 × 이 값)
   boostZone: boolean; // OT-6 구간 모드 (트랙 데이터 구간 · 앞 코너 진입 감지 · E1 고정 끝 · 슬립스트림과 큰 값만)
   // 접촉 규칙 정리 스위치 (AG-P039 A, AG-P040 A, 기본 꺼짐)

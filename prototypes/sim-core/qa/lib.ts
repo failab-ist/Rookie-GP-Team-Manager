@@ -94,13 +94,13 @@ export const NPC = { overtake: 5, control: 5, focus: 5 }; // 상대 레이서 �
 const toStats = (a: number[]): CarStats => ({ topSpeed: a[0], accel: a[1], grip: a[2], brake: a[3] });
 export const opponents = (): Entry[] =>
   L2_OPPONENTS.map((o, i) => ({ racer: { id: `npc-${i + 1}`, stats: NPC, passiveId: null }, car: { id: `O${i + 1}`, stats: toStats(o) } }));
-export const race = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>, qa: QaHooks = {}) =>
-  simulate({ seed, track, laps: 3, entries: [test, ...opponents()] }, { k: EXIT_LIMIT_RELAX, ...opts }, qa);
+export const race = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>, qa: QaHooks = {}, laps = 3) =>
+  simulate({ seed, track, laps, entries: [test, ...opponents()] }, { k: EXIT_LIMIT_RELAX, ...opts }, qa);
 // 멈춘 레이스(600초 안에 안 끝남): 고치지 않고 기록하고 집계에서 뺀다 (디렉터 2026-11-02)
 export const STUCK: string[] = [];
-export const tryRace = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>, qa: QaHooks = {}) => {
+export const tryRace = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>, qa: QaHooks = {}, laps = 3) => {
   try {
-    return race(track, seed, test, opts, qa);
+    return race(track, seed, test, opts, qa, laps);
   } catch (e) {
     STUCK.push(`${(e as Error).message} | 테스트 차 ${JSON.stringify(test.car.stats)} 레이서 ${JSON.stringify(test.racer.stats)} | 설정 ${JSON.stringify(opts)}`);
     return null;

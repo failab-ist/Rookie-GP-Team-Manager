@@ -41,6 +41,8 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   dirtyAir: C.DIRTY_AIR,
   boost: C.BOOST,
   cornerPriority: C.CORNER_PRIORITY,
+  blockCap: C.BLOCK_CAP_ON,
+  otSpanStraights: C.OT_SPAN_STRAIGHTS,
   yieldMinRatio: C.YIELD_MIN_RATIO,
   boostZone: C.BOOST_ZONE,
   ctWobble: C.CT_WOBBLE,
@@ -351,7 +353,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         const outward = changing(c) && c.dir === 1;
         const clear = Math.abs(laneCenter(c.to) - laneCenter(c.from)) * c.prog >= C.CAR_WIDTH;
         const f = outward && (!o.capWhileChanging || (o.otRelease && clear)) ? frontOf(c, c.to) : frontOf(c);
-        if (f) cap.set(c, blockCap(f.v, gapTo(c, f)));
+        if (f && o.blockCap) cap.set(c, blockCap(f.v, gapTo(c, f)));
         // OT-7 우선권을 진 차: 이긴 차 뒤 최소 간격까지 물러난다 (제동 능력 안에서)
         if (c.yieldTo !== null) {
           const w = cars[c.yieldTo];
@@ -454,7 +456,9 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         else if (!(tryRng[c.i]() < pTry(entries[c.i].racer.stats))) continue;
         c.log.tries++;
         judge(JudgementKind.overtakeTry, [c.i, f.i], freeMove ? 'free' : null);
-        c.ot = { front: f.i, segEnd: o.otSpanCorner ? nextStraightEnd(c.s) : c.s - (c.s % L) + seg.end, orig: c.from, target: lanes[0] };
+        let segEnd = o.otSpanCorner ? nextStraightEnd(c.s) : c.s - (c.s % L) + seg.end;
+        if (o.otSpanCorner) for (let k = 1; k < o.otSpanStraights; k++) segEnd = nextStraightEnd(segEnd - 1e-6);
+        c.ot = { front: f.i, segEnd, orig: c.from, target: lanes[0] };
         startChange(c, lanes[0]);
       }
 
