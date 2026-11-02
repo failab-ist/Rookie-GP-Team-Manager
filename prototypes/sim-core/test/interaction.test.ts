@@ -70,6 +70,8 @@ test('추월 5단계 흐름 묶음(OT_FLOW_ALL): 같은 입력 두 번이 바이
   for (const track of tracks) {
     const run = () => simulate({ seed: 5, track, laps: 3, entries: lineup }, { ...OT_FLOW_ALL, slipstream: true });
     const a = run();
+    const t = simulate({ seed: 5, track, laps: 3, entries: lineup }, { ...OT_FLOW_ALL, slipstream: true }, { trace: true });
+    assert.ok(t.trace!.every((row) => row.every((c) => c[0] >= 0)), `${track.id} 음수 속도`);
     assert.equal(JSON.stringify(a), JSON.stringify(run()), track.id);
     for (const e of a.events.filter((x) => x.kind === 3)) {
       const [cause, how, by, car] = e.cause!.split(':');

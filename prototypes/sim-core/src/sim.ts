@@ -76,6 +76,7 @@ type Car = {
   yieldEnd: number; // OT-7 그 코너 끝 누적 거리
   lastMistake: number; // 혼전 실수 틱
   lastContact: number; // 접촉 시작 틱
+  cornerEntryV: number; // 지금 코너에 들어설 때 속도 (OT-7 보조 규칙)
 };
 
 // opts: 비교 실험용. 빠진 값은 DEFAULT_OPTIONS
@@ -138,6 +139,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     yieldEnd: -Infinity,
     lastMistake: -Infinity,
     lastContact: -Infinity,
+    cornerEntryV: 0,
   }));
   if (o.interaction) {
     // 2열 엇갈림 그리드 (INT §4.5). 출발 순서 0번이 맨 앞 줄 B열
@@ -318,7 +320,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
           const w = cars[c.yieldTo];
           if (w.finished || c.s >= c.yieldEnd || c.s <= w.s - C.CAR_LENGTH - C.GAP_MIN) c.yieldTo = null;
           else {
-            const yv = Math.max(c.v - c.p.aBrk * C.TICK_SECONDS, w.v + (w.s - c.s - C.CAR_LENGTH - C.GAP_MIN) / C.BLOCK_TAU);
+            // 속도 하한 0 (INT R4-3). 출발 직후처럼 느릴 때 두 항이 모두 음수가 될 수 있다
+            const yv = Math.max(0, c.v - c.p.aBrk * C.TICK_SECONDS, w.v + (w.s - c.s - C.CAR_LENGTH - C.GAP_MIN) / C.BLOCK_TAU);
             cap.set(c, Math.min(cap.get(c) ?? Infinity, yv));
           }
         }
@@ -431,8 +434,12 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         c.log.laneTicks[c.from]++;
         c.vPrev = c.v;
         for (let k = 0; k < C.SUBSTEPS; k++) {
-          c.v = step(course, p, o.k, c.s, c.v, false, { cap: capV, noAccel: t < c.react });
+          // OT-7을 켜면 정점 전에 줄어든 속도(우선권 양보 · 막힘)를 진입 속도까지 되찾을 수 있다. 끄면 F7 그대로
+          const preApexUpTo = o.cornerPriority ? c.cornerEntryV : undefined;
+          const sBefore = c.s;
+          c.v = step(course, p, o.k, c.s, c.v, false, { cap: capV, noAccel: t < c.react, preApexUpTo });
           c.s += c.v * DT;
+          if (course.segs.some((sg) => sg.kind === 'corner' && crossed(sBefore, c.s, sg.start))) c.cornerEntryV = c.v;
         }
         row[c.i][0] = c.v;
       }
@@ -514,7 +521,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
             if (sg.kind !== 'corner' || !crossed(before[c.i], c.s, sg.start)) continue;
             const cornerStart = c.s - ((c.s - sg.start) % L);
             for (const d of act) {
-              if (d === c || shareLane(c, d) || Math.abs(c.s - d.s) >= C.CAR_LENGTH || c.yieldTo === d.i || d.yieldTo === c.i) continue;
+              // 나란히 = 바로 옆 차선(차선 번호 차이 1)에서 앞뒤로 겹침. 0번과 2번 차선은 닿지 않으므로 제외 (가안)
+              if (d === c || shareLane(c, d) || Math.abs(c.from - d.from) !== 1 || Math.abs(c.s - d.s) >= C.CAR_LENGTH || c.yieldTo === d.i || d.yieldTo === c.i) continue;
               const cAhead = c.s > d.s - C.CAR_LENGTH / 2; // 앞 범퍼가 상대 차 중심보다 앞
               const dAhead = d.s > c.s - C.CAR_LENGTH / 2;
               const inner = sg.innerLane ?? C.DEFAULT_INNER_LANE;
@@ -530,6 +538,16 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
                 why = 'inner';
               }
               const loser = winner === c ? d : c;
+              // 양보가 고리(A→B→C→A)를 만들면 모두 멈추므로 그 양보는 두지 않는다 (가안)
+              let k: Car | null = winner;
+              const seen = new Set<number>();
+              let cycle = false;
+              while (k && k.yieldTo !== null && !seen.has(k.i)) {
+                if (k.yieldTo === loser.i) cycle = true;
+                seen.add(k.i);
+                k = cars[k.yieldTo];
+              }
+              if (cycle) continue;
               loser.yieldTo = winner.i;
               loser.yieldEnd = cornerStart + sg.length;
               judge(JudgementKind.cornerPriority, [winner.i, loser.i], `winner:${winner.i}:${why}`);

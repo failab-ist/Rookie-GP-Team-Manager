@@ -88,14 +88,18 @@ export function step(
   x: number,
   v: number,
   holdOnStraight = false,
-  extra?: { cap?: number; noAccel?: boolean },
+  extra?: { cap?: number; noAccel?: boolean; preApexUpTo?: number },
 ): number {
   const s = segAt(c, x);
-  const accel = !extra?.noAccel && (s.kind === 'straight' ? !holdOnStraight : wrap(c, x) >= s.apex);
+  // preApexUpTo: 정점 전이라도 이 속도까지는 되찾는다 (OT-7 보조 규칙, F7 v_apex = min(v_entry, V_corner)와 같은 상한)
+  const preApex = s.kind === 'corner' && wrap(c, x) < s.apex;
+  const recover = preApex && extra?.preApexUpTo !== undefined && v < extra.preApexUpTo;
+  const accel = !extra?.noAccel && (s.kind === 'straight' ? !holdOnStraight : !preApex || recover);
   const xn = x + v * DT;
-  const vn = accel ? v + p.A * DT : v;
+  const vn = accel ? (recover ? Math.min(v + p.A * DT, extra!.preApexUpTo!) : v + p.A * DT) : v;
   // 스텝 시작점과 끝점의 한계를 모두 지킨다 (구간 경계에서 한 스텝 넘치는 것 방지)
-  return Math.min(vn, p.vTop, limitAt(c, p, k, x), limitAt(c, p, k, xn), envelopeAt(c, p, xn), extra?.cap ?? Infinity);
+  // 속도 하한 0 (INT R4-3): 어떤 상한이 음수로 들어와도 뒤로 가지 않는다
+  return Math.max(0, Math.min(vn, p.vTop, limitAt(c, p, k, x), limitAt(c, p, k, xn), envelopeAt(c, p, xn), extra?.cap ?? Infinity));
 }
 
 export type Trace = { x: number[]; v: number[]; t: number[] };
