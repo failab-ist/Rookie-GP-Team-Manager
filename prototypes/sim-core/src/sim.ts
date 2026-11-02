@@ -335,6 +335,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       }
     } else {
       const act = active(); // (1) 직전 틱 (순위, 슬롯) 순서 (INT §8)
+      if (qa.reverseOrder) act.reverse(); // QA 전용: 처리 순서 뒤집기 (순서 의존 확인)
       if (o.dirtyAir > 0 || o.boost > 0) computeChasing(act);
 
       // (2) 막힘 상한 (INT §4.2)

@@ -156,6 +156,7 @@ export type QaHooks = {
   start?: { s: number; lane: number; v: number }[];
   trace?: boolean;
   grid?: number[]; // 출발 순서 지정 (자리 0 = 맨 앞). 차 번호 순열
+  reverseOrder?: boolean; // 틱 안 차 처리 순서를 (순위, 슬롯)의 반대로
 };
 // trace[틱][차] = [속도, from 차선, to 차선, 변경 진행, 막힘 상한 적용 0/1, 슬립스트림 적용 0/1, 횡 오차 ε, 실수 중 0/1]
 export type TraceRow = [number, number, number, number, number, number, number, number];
