@@ -30,6 +30,7 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   accelPoint: C.ACCEL_POINT,
   brakePoint: C.BRAKE_POINT,
   abScale: C.AB_BASE_SCALE,
+  accelDrag: C.ACCEL_DRAG,
   latSpeed: C.LAT_SPEED,
   desiredSpeed: C.DESIRED_SPEED,
   slipRatio: C.SLIP_RATIO,

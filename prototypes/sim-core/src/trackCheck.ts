@@ -1,6 +1,6 @@
 // 트랙 데이터 형식 검사와 코너 검사 (CAR_STATS_TRACKS_PROTO_DRAFT.md §4.1, §4.3). 기준 차로 공식 계산한다.
 import { BASE_CAR_STAT, BEND_MAX, P_APEX } from './config.ts';
-import { carParams, vCorner, type CarParams } from './physics.ts';
+import { accelAt, carParams, vCorner, type CarParams } from './physics.ts';
 import type { Track, TrackSegment } from './types.ts';
 
 export type CornerCalc = {
@@ -48,7 +48,7 @@ function exitSpeed(p: CarParams, k: number, seg: TrackSegment, vApex: number, ca
   for (let i = 1; i <= n; i++) {
     const relax = 1 - (k * i) / n;
     const limit = relax <= 0 ? p.vTop : Math.min(p.vTop, p.vg / (seg.bend * relax));
-    v = Math.min(Math.sqrt(v * v + 2 * p.A * dx), limit, capNext);
+    v = Math.min(Math.sqrt(v * v + 2 * accelAt(p, v) * dx), limit, capNext);
   }
   return v;
 }
@@ -58,8 +58,23 @@ function exitSpeed(p: CarParams, k: number, seg: TrackSegment, vApex: number, ca
 export function boostZoneLength(L: number, bendPrev: number, bendNext: number, p: CarParams = carParams(BASE)): number {
   const s = vCorner(p, bendPrev);
   const e = vCorner(p, bendNext);
+  if (p.drag) return L - straightCurve(p, s, L, e).D;
   const vpk2 = Math.min(p.vTop ** 2, (2 * p.A * p.aBrk * L + p.aBrk * s * s + p.A * e * e) / (p.A + p.aBrk));
   return L - (vpk2 - e * e) / (2 * p.aBrk);
+}
+
+// 가속 곡선이 켜져 있을 때 직선의 최고 도달 속도와 제동 거리 (식이 닫히지 않아 거리로 적분, AG-P046 A).
+// 시작 vStart에서 a(v)로 가속하다가 끝 속도 vEnd까지 a_brk로 줄여야 하는 지점(또는 V_top)에서 멈춘다. vEnd = Infinity면 끝까지 가속
+export function straightCurve(p: CarParams, vStart: number, L: number, vEnd: number): { vS: number; D: number } {
+  const n = 4000;
+  const dx = L / n;
+  let v = vStart;
+  for (let i = 0; i < n; i++) {
+    const left = L - i * dx;
+    if (vEnd !== Infinity && v * v - vEnd * vEnd >= 2 * p.aBrk * left) return { vS: v, D: Math.max(0, (v * v - vEnd * vEnd) / (2 * p.aBrk)) };
+    v = Math.min(p.vTop, Math.sqrt(v * v + 2 * accelAt(p, v) * dx));
+  }
+  return { vS: v, D: vEnd === Infinity ? 0 : Math.max(0, (v * v - vEnd * vEnd) / (2 * p.aBrk)) };
 }
 
 export function checkTrack(track: Track, k: number, p: CarParams = carParams(BASE)): TrackCalc {
@@ -82,7 +97,7 @@ export function checkTrack(track: Track, k: number, p: CarParams = carParams(BAS
         const nx = next(i);
         const vStart = v;
         if (nx.kind !== 'corner') {
-          v = Math.min(p.vTop, Math.sqrt(v * v + 2 * p.A * s.length)); // F6a
+          v = p.drag ? straightCurve(p, v, s.length, Infinity).vS : Math.min(p.vTop, Math.sqrt(v * v + 2 * p.A * s.length)); // F6a
           straights.push({ id: s.id, vStart, vS: v, D: 0, reachTop: v >= p.vTop });
           continue;
         }
@@ -90,7 +105,9 @@ export function checkTrack(track: Track, k: number, p: CarParams = carParams(BAS
         const dTop = (p.vTop ** 2 - vc ** 2) / (2 * p.aBrk);
         let D: number;
         let vS: number;
-        if (vStart ** 2 + 2 * p.A * (s.length - dTop) >= p.vTop ** 2) {
+        if (p.drag) {
+          ({ vS, D } = straightCurve(p, vStart, s.length, vc));
+        } else if (vStart ** 2 + 2 * p.A * (s.length - dTop) >= p.vTop ** 2) {
           D = dTop; // F5
           vS = p.vTop;
         } else {

@@ -55,6 +55,9 @@ export const BRAKE_POINT = 0;
 // P-2: 가속 · 제동 기본값 A0 · B0 배율 (1점당 비율 4%는 그대로). 1 = 꺼짐. 지시서 예시 단계 1, 0.75, 0.5, 0.35
 export const AB_BASE_SCALE = 1;
 export const AB_SCALE_STEPS = [1, 0.75, 0.5, 0.35]; // 지시서 예시 (가안)
+// 가속 곡선 (AG-P046 A): a(v) = A × (1 − c × (v / V_top)²). 공기저항이 속도 제곱에 비례한다는 근거만 쓴다. 0 = 꺼짐 (지금 일정 가속). 제동은 그대로
+export const ACCEL_DRAG = 0;
+export const ACCEL_DRAG_STEPS = [0.5, 0.7, 0.9]; // 지시서 허용 값 (이 밖은 시험하지 않는다)
 export const AC1_A0 = 30; // 가안, INT §4.7 AC-1 (A = 30(1 + 1.33n))
 export const AC1_KA = 1.33; // 가안, INT §4.7 AC-1
 

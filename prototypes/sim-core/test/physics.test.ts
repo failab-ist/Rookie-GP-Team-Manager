@@ -92,3 +92,21 @@ test('QA 출발 순서 지정: qa.grid의 자리 0 차가 맨 앞에서 출발�
   assert.equal(Math.max(...r.frames[0]), r.frames[0][3]);
   assert.throws(() => simulate({ seed: 7, track: tracks[0], laps: 1, entries: example.entries }, {}, { grid: [0, 0, 1, 2, 4, 5, 6, 7, 8, 9] }), /순열/);
 });
+
+test('가속 곡선 (AG-P046 A): a(v) = A(1 − c(v/V_top)²), 0 → V_top 시간은 (V_top/A)·atanh(√c)/√c에 가깝다', async () => {
+  const { accelAt } = await import('../src/physics.ts');
+  const { straightCurve } = await import('../src/trackCheck.ts');
+  const p = carParams({ topSpeed: 5, accel: 5, grip: 5, brake: 5 }, 'current', { accelPoint: 0, brakePoint: 0, abScale: 1, accelDrag: 0.5 });
+  assert.equal(accelAt(p, 0), 50);
+  assert.equal(accelAt(p, 125), 25);
+  assert.equal(accelAt(base, 125), 50); // 꺼짐
+  const course = buildCourse([{ id: 's', kind: 'straight', length: 2000, bend: 0, width: 12, passable: true }], false);
+  const tr = runSolo(course, p, 0, { x0: 0, v0: 0, xEnd: 1000 });
+  const reach = tr.t[tr.v.findIndex((v) => v >= 125 - 1e-9)];
+  const expect = (125 / 50) * (Math.atanh(Math.sqrt(0.5)) / Math.sqrt(0.5));
+  assert.ok(Math.abs(reach - expect) < 0.02, `${reach} vs ${expect}`);
+  // 꺼져 있으면 적분 직선 계산이 F5 손계산과 같다 (M1-S1 L-B: 62.5 → 100, 324 u, D 37.5)
+  const r = straightCurve(base, 62.5, 324, 100);
+  assert.ok(Math.abs(r.vS - 125) < 1e-9 && Math.abs(r.D - 37.5) < 0.1);
+  assert.throws(() => carParams({ topSpeed: 5, accel: 5, grip: 5, brake: 5 }, 'current', { accelPoint: 0, brakePoint: 0, abScale: 1, accelDrag: 1 }), /가속 곡선/);
+});

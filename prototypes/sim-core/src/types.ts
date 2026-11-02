@@ -131,6 +131,7 @@ export type RaceOptions = {
   accelPoint: number;
   brakePoint: number;
   abScale: number;
+  accelDrag: number; // 가속 곡선 c (AG-P046 A, 0 = 꺼짐)
   latSpeed: number; // 차선 변경 횡 속도 v_lat u/s (INT §4.1)
   // 추월 시도 조건의 '원하는 속도' (INT R3-1, 초안에 정의 없음). step = 다음 물리 스텝 속도(3단계 구현), target = 막히지 않았을 때의 한계 속도
   desiredSpeed: 'step' | 'target';

@@ -1,5 +1,5 @@
 // 차량 4능력치 주행 물리 (CAR_STATS_TRACKS_PROTO_DRAFT.md §3, §7). 화면 · node: 모듈 없음.
-import { A0, AB_BASE_SCALE, AC1_A0, AC1_KA, ACCEL_FORMULA, ACCEL_POINT, B0, BASE_CAR_STAT, BRAKE_POINT, CAR_STAT_MAX, G0, KA, KB, KG, KV, P_APEX, SUBSTEPS, TICK_SECONDS, V0 } from './config.ts';
+import { A0, AB_BASE_SCALE, ACCEL_DRAG, AC1_A0, AC1_KA, ACCEL_FORMULA, ACCEL_POINT, B0, BASE_CAR_STAT, BRAKE_POINT, CAR_STAT_MAX, G0, KA, KB, KG, KV, P_APEX, SUBSTEPS, TICK_SECONDS, V0 } from './config.ts';
 import type { CarStats, TrackSegment } from './types.ts';
 
 export type CarParams = {
@@ -7,11 +7,12 @@ export type CarParams = {
   A: number; // F3a 가속도
   vg: number; // F4 bend 1일 때 접지 한계
   aBrk: number; // F5a 진입 감속도
+  drag?: number; // 가속 곡선 c (AG-P046 A). 없으면 일정 가속
 };
 
 // 능력치 1점 효과 맞추기 실험 스위치 (기본 꺼짐, config)
-export type StatTune = { accelPoint: number; brakePoint: number; abScale: number };
-export const NO_TUNE: StatTune = { accelPoint: ACCEL_POINT, brakePoint: BRAKE_POINT, abScale: AB_BASE_SCALE };
+export type StatTune = { accelPoint: number; brakePoint: number; abScale: number; accelDrag?: number };
+export const NO_TUNE: StatTune = { accelPoint: ACCEL_POINT, brakePoint: BRAKE_POINT, abScale: AB_BASE_SCALE, accelDrag: ACCEL_DRAG };
 
 // P-1: 5점 값 v5는 두고 1점당 비율 p가 되게 계수를 다시 푼다. p = 0.1·K / (1 + 0.5·K) → K = p / (0.1 − 0.5·p)
 function retuned(v5: number, p: number, n: number): number {
@@ -35,13 +36,21 @@ export function carParams(s: CarStats, formula: 'current' | 'AC1' = ACCEL_FORMUL
     A *= tune.abScale;
     aBrk *= tune.abScale;
   }
-  return {
+  const p: CarParams = {
     vTop: V0 * (1 + KV * n(s.topSpeed)),
     A,
     vg: G0 * (1 + KG * n(s.grip)),
     aBrk,
   };
+  if (tune.accelDrag) {
+    if (!(tune.accelDrag > 0 && tune.accelDrag < 1)) throw new Error('가속 곡선 c는 0 초과 1 미만 (1이면 V_top에 닿지 않는다)');
+    p.drag = tune.accelDrag;
+  }
+  return p;
 }
+
+// 속도 v에서의 가속도. 가속 곡선이 꺼져 있으면 A 그대로 (AG-P046 A)
+export const accelAt = (p: CarParams, v: number) => (p.drag ? p.A * (1 - p.drag * (v / p.vTop) ** 2) : p.A);
 
 // F4 코너 한계 속도
 export const vCorner = (p: CarParams, bend: number) => Math.min(p.vTop, p.vg / bend);
@@ -116,7 +125,7 @@ export function step(
   const s = segAt(c, x);
   const accel = !extra?.noAccel && (s.kind === 'straight' ? !holdOnStraight : wrap(c, x) >= s.apex);
   const xn = x + v * DT;
-  const vn = accel ? v + p.A * DT : v;
+  const vn = accel ? v + accelAt(p, v) * DT : v;
   // 스텝 시작점과 끝점의 한계를 모두 지킨다 (구간 경계에서 한 스텝 넘치는 것 방지)
   // 속도 하한 0 (INT R4-3): 어떤 상한이 음수로 들어와도 뒤로 가지 않는다
   return Math.max(0, Math.min(vn, p.vTop, limitAt(c, p, k, x), limitAt(c, p, k, xn), envelopeAt(c, p, xn), extra?.cap ?? Infinity));
