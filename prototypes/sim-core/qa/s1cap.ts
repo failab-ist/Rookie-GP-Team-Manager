@@ -168,6 +168,8 @@ if (part === 'run') {
   let s1 = 0;
   let contacts = 0;
   let races = 0;
+  let leads = 0; // 1위 변경(종류 6)
+  let leadsS1 = 0; // 그중 같은 틱 OT-4 추월 기록이 새 선두의 S1인 것 (cause <원인>:S1:by:<새 선두>)
   const carRank = CAR5.map(() => [] as number[]); // 테스트 차(엔트리 0)를 5종으로 바꿔 같은 순환을 돌린 평균 순위
   for (let k = 0; k < N; k++)
     for (const t of LB)
@@ -183,6 +185,10 @@ if (part === 'run') {
           s1 += r.carStats.reduce((s, c) => s + c.successes, 0);
           contacts += r.carStats.reduce((s, c) => s + c.contacts, 0) / 2;
           carRank[0].push(r.finishOrder.indexOf(0) + 1);
+          for (const e of r.events.filter((x) => x.kind === 6)) {
+            leads++;
+            if (r.events.some((p) => p.kind === 3 && p.tick === e.tick && p.cause!.endsWith(`:S1:${e.cause}`))) leadsS1++;
+          }
         }
         CAR5.slice(1).forEach(([, cs], i) => {
           const q = tryRace(t, seed, testCar(cs), v.opts, { grid });
@@ -200,7 +206,7 @@ if (part === 'run') {
     JSON.stringify({
       key: a1, name: v.name, set: SET_KO, races, stuck: STUCK.length, guard: acc.guard, mismatch: acc.mismatch,
       win1: win(0), win2: win(1), win3_10: [2, 3, 4, 5, 6, 7, 8, 9].reduce((s, sl) => s + win(sl), 0),
-      rho: mean(rho), share: ssSlot / ssTot, passes: passes / races, s1: s1 / races, contacts: contacts / races,
+      rho: mean(rho), share: ssSlot / ssTot, leads: leads / races, leadsS1: leadsS1 / Math.max(1, leads), passes: passes / races, s1: s1 / races, contacts: contacts / races,
       tries: tot, outcomeN: acc.outcome, outcome: Object.fromEntries(Object.entries(acc.outcome).map(([kk, x]) => [kk, x / tot])),
       fail: acc.fail, capFail: acc.capFail,
       cap: { dt: summ(acc.dt), gap: summ(acc.gap), dv: summ(acc.dv), gapEnd: summ(acc.gapEnd), dvEnd: summ(acc.dvEnd) },
@@ -297,7 +303,7 @@ if (part === 'report') {
   const q = (s: { n: number; mean: number; p: number[] }, d = 2) => (s.n ? `${f(s.mean, d)} · ${s.p.map((x) => f(x, d)).join(' / ')}` : '–');
   out('① 승리 · 상관 · 출발 자리 몫 · 접촉 · 추월 / S1');
   out();
-  out(table(['설정', '시드', '레이스', '자리 1 우승', '자리 3~10 우승 합', '출발 · 최종 순위 상관', '출발 자리 몫', '추월(OT-4) / S1 성공 (레이스당)', '접촉 (레이스당)'], rs.map((r) => [r.name, r.set, r.races, pc(r.win1), `**${pc(r.win3_10)}**`, f(r.rho, 3), pc(r.share), `${f(r.passes, 2)} / ${f(r.s1, 2)}`, f(r.contacts, 2)])));
+  out(table(['설정', '시드', '레이스', '자리 1 우승', '자리 3~10 우승 합', '출발 · 최종 순위 상관', '출발 자리 몫', '1위 변경 (레이스당) · 그중 S1', '추월(OT-4) / S1 성공 (레이스당)', '접촉 (레이스당)'], rs.map((r) => [r.name, r.set, r.races, pc(r.win1), `**${pc(r.win3_10)}**`, f(r.rho, 3), pc(r.share), `${f(r.leads, 2)} · ${pc(r.leadsS1)}`, `${f(r.passes, 2)} / ${f(r.s1, 2)}`, f(r.contacts, 2)])));
   out();
   out('② 정식 시도 결과 분포와 S1 성공률 (분모 = 정식 시도 수, 미결 포함)');
   out();
