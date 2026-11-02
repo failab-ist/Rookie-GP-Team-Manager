@@ -92,6 +92,7 @@ export const BOOST = 0; // OT-6 부스트 최고속도 증가 %. 비교값 3, 5,
 export const BOOST_COMPARE = [3, 5, 8]; // 가안, 지시서 비교값
 export const CORNER_PRIORITY = false; // OT-7
 export const YIELD_MIN_RATIO = 0.5; // 가안, 근거 없음. OT-7 양보하는 차는 자기 코너 한계 속도의 이 비율 아래로 줄이지 않는다 (디렉터 2026-11-02)
+export const YIELD_MIN_COMPARE = [0.3, 0.5, 0.7]; // 지시서 비교값 (2026-11-02)
 export const CHASE_SECONDS = 1.0; // 가안, OT-5 추격 상태 = 앞차(차선 무관)와 시간 간격 1.0 s 이내
 export const PASS_HOLD_SECONDS = 1.0; // 가안, OT-4 앞뒤가 바뀐 뒤 이 시간 유지되면 추월로 기록
 // OT-4 원인 우선순위 (가안, UNRESOLVED): 접촉 > 상대 실수 > 부스트 > 제동 구간 > 코너(접지) > 탈출(가속) > 직선(최고속도)
@@ -109,6 +110,16 @@ export const CT_LOSS_MINOR = 0.03; // 가안, 근거 없음. CT-3 옆 접촉 두
 export const CT_ALL = { ctWobble: true, ctLine: CT_LINE_ON, ctContact: true };
 export const OT_FLOW_ALL = { desiredSpeed: 'target' as const, otRelease: true, otSpanCorner: true, dirtyAir: DIRTY_AIR_ON, boost: 5, cornerPriority: true };
 export const DEFAULT_INNER_LANE = 0; // 가안, 근거 없음. 코너 방향 데이터가 없어 모든 코너 안쪽 = 0번 (디렉터 2026-11-02)
+// 트랙 데이터의 innerLane은 차선 규약 A(진행 방향 왼쪽 끝 = 0, L 코너 안쪽 0 · R 코너 안쪽 2, DIRECTION 초안 R-1, Q-78 가안)로 읽는다
+
+// ---------- 모티브 트랙 (PROTO_TRACKS_MOTIF_DRAFT.md, PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md). 새 규칙은 기본 꺼짐 ----------
+export const BEND_MAX = 1.5; // MOTIF §5.2 bend (0.6, 1.5]. CAR §4.1은 코너 bend (0, 1] → CONFLICT (헤어핀 1.5를 받으려고 MOTIF 범위를 씀)
+// OT-6 구간 모드: 트랙 데이터의 부스트 구간(트랙당 1곳 Z1, Q-81 가안), 감지 = 구간 앞 코너 진입점에서 추격 상태(CHASE_SECONDS, Q-82 가안),
+// 1랩부터(Q-82 가안), 구간 끝 = E1 고정 끝 L − D_base(Q-87 가안), 슬립스트림과 겹치면 최고속도 보너스는 큰 값만(Q-80 가안)
+export const BOOST_ZONE = false;
+export const BOOST_ZONE_B = 4; // % (b 0.04, Q-83 가안 범위 0.02~0.06의 가운데)
+// 모티브 트랙 측정 설정: OT_FLOW_ALL + CT_ALL + 구간 모드 (부스트 % 는 OT_FLOW_ALL의 5 대신 b 0.04). 이름 붙인 묶음으로만 쓴다
+export const MOTIF_ALL = { ...OT_FLOW_ALL, ...CT_ALL, boostZone: true, boost: BOOST_ZONE_B };
 
 // 레이서 능력치 S-A 판단형 (AG-P027 A, RACER F2 · F3 · F4, INT §6.1)
 export const RACER_P0 = 0.5; // 가안, RACER_STATS_PASSIVES_DRAFT.md:183

@@ -1,0 +1,19 @@
+{
+  "_note": "PROTO_TRACKS_MOTIF_DRAFT.md §7.1 표(Lreal, Lc_real, bend) × 축소안 L-C ρ 2.5 (§8.1, S 1.00) 그대로 (가안). 코너 방향 · 안쪽 차선은 DIRECTION 초안 R-2 표가 비어 있어(SOURCE ACCESS ISSUE) 넣지 않았다 → 기본 0번. 부스트 구간은 DIRECTION 초안 §4 Z1 (가안)",
+  "id": "M1-LC",
+  "boostZone": "M1-S4",
+  "segments": [
+    {"id":"M1-S1","kind":"straight","length":450,"bend":0,"width":12,"passable":true},
+    {"id":"M1-C1","kind":"corner","length":75,"bend":0.75,"width":12,"passable":false},
+    {"id":"M1-S2","kind":"straight","length":225,"bend":0,"width":12,"passable":true},
+    {"id":"M1-C2","kind":"corner","length":100,"bend":1,"width":12,"passable":false},
+    {"id":"M1-S3","kind":"straight","length":200,"bend":0,"width":12,"passable":true},
+    {"id":"M1-C3","kind":"corner","length":100,"bend":1.5,"width":12,"passable":false},
+    {"id":"M1-S4","kind":"straight","length":650,"bend":0,"width":12,"passable":true},
+    {"id":"M1-C4","kind":"corner","length":75,"bend":0.9,"width":12,"passable":false},
+    {"id":"M1-S5","kind":"straight","length":225,"bend":0,"width":12,"passable":true},
+    {"id":"M1-C5","kind":"corner","length":75,"bend":0.7,"width":12,"passable":false},
+    {"id":"M1-S6","kind":"straight","length":225,"bend":0,"width":12,"passable":true},
+    {"id":"M1-C6","kind":"corner","length":100,"bend":1.2,"width":12,"passable":false}
+  ]
+}

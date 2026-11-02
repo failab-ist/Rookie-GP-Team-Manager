@@ -1,5 +1,5 @@
 // 트랙 데이터 형식 검사와 코너 검사 (CAR_STATS_TRACKS_PROTO_DRAFT.md §4.1, §4.3). 기준 차로 공식 계산한다.
-import { BASE_CAR_STAT, P_APEX } from './config.ts';
+import { BASE_CAR_STAT, BEND_MAX, P_APEX } from './config.ts';
 import { carParams, vCorner, type CarParams } from './physics.ts';
 import type { Track, TrackSegment } from './types.ts';
 
@@ -31,7 +31,7 @@ export function checkFormat(track: Track): string[] {
     if (!(s.length > 0)) errors.push(`${s.id}: 길이 0 이하`);
     if (!(s.width > 0)) errors.push(`${s.id}: 폭 0 이하`);
     if (s.kind === 'straight' && s.bend !== 0) errors.push(`${s.id}: 직선인데 bend가 0이 아님`);
-    if (s.kind === 'corner' && !(s.bend > 0 && s.bend <= 1)) errors.push(`${s.id}: 코너 bend는 (0, 1]`);
+    if (s.kind === 'corner' && !(s.bend > 0 && s.bend <= BEND_MAX)) errors.push(`${s.id}: 코너 bend는 (0, ${BEND_MAX}]`);
     if (s.kind !== 'straight' && s.kind !== 'corner') errors.push(`${s.id}: 종류 오류`);
     if (typeof s.passable !== 'boolean') errors.push(`${s.id}: 추월 가능 표시 누락`);
   }
@@ -49,6 +49,15 @@ function exitSpeed(p: CarParams, k: number, seg: TrackSegment, vApex: number, ca
     v = Math.min(Math.sqrt(v * v + 2 * p.A * dx), limit, capNext);
   }
   return v;
+}
+
+// 부스트 구간 길이 E1 고정 끝 L_z = L − D_base (DIRECTION 초안 F-B2). 기준 차, 시작 s = 앞 코너 V_c, 끝 e = 다음 코너 V_c
+// v_pk² = (2·A·B·L + B·s² + A·e²) / (A + B) (기준 차에서 60·L + 0.6·s² + 0.4·e²), v_pk ≤ V_top. D_base = (v_pk² − e²) / (2·B)
+export function boostZoneLength(L: number, bendPrev: number, bendNext: number, p: CarParams = carParams(BASE)): number {
+  const s = vCorner(p, bendPrev);
+  const e = vCorner(p, bendNext);
+  const vpk2 = Math.min(p.vTop ** 2, (2 * p.A * p.aBrk * L + p.aBrk * s * s + p.A * e * e) / (p.A + p.aBrk));
+  return L - (vpk2 - e * e) / (2 * p.aBrk);
 }
 
 export function checkTrack(track: Track, k: number, p: CarParams = carParams(BASE)): TrackCalc {

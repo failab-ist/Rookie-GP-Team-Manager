@@ -5,7 +5,7 @@ import { diffOrder, makeEvent, sortEvents } from './events.ts';
 import { buildCourse, carParams, DT, envelopeAt, limitAt, segAt, step, vCorner, type CarParams } from './physics.ts';
 import { isPassive, lateralErr, pFocus, pTry, type PassiveId } from './racer.ts';
 import { createRng, shuffle, subStream, type Rng } from './rng.ts';
-import { checkTrack } from './trackCheck.ts';
+import { boostZoneLength, checkTrack } from './trackCheck.ts';
 import {
   EventKind,
   JudgementKind,
@@ -36,6 +36,8 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   dirtyAir: C.DIRTY_AIR,
   boost: C.BOOST,
   cornerPriority: C.CORNER_PRIORITY,
+  yieldMinRatio: C.YIELD_MIN_RATIO,
+  boostZone: C.BOOST_ZONE,
   ctWobble: C.CT_WOBBLE,
   ctLine: C.CT_LINE,
   ctContact: C.CT_CONTACT,
@@ -74,6 +76,7 @@ type Car = {
   log: CarStatsLog;
   vPrev: number; // 직전 틱 속도 (OT-4 원인 판정)
   pendingReturn: number | null; // OT-3: 코너에서 실패하면 다음 직선에서 원래 차선으로
+  boostFrom: number; // OT-6 구간 모드에서 부스트가 시작되는 누적 거리 (아니면 -Infinity)
   boostUntil: number; // OT-6 부스트가 끝나는 누적 거리
   yieldTo: number | null; // OT-7 코너 우선권을 진 상대
   yieldEnd: number; // OT-7 그 코너 끝 누적 거리
@@ -140,6 +143,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     },
     vPrev: 0,
     pendingReturn: null,
+    boostFrom: -Infinity,
     boostUntil: -Infinity,
     yieldTo: null,
     yieldEnd: -Infinity,
@@ -259,8 +263,15 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       if (ahead && (ahead.s - c.s) / Math.max(c.v, 1) <= C.CHASE_SECONDS) chasing.add(c);
     }
   };
-  // OT-6 부스트 구간: 트랙에서 가장 긴 직선(같으면 앞 구간) 1곳. 실험용 설정이며 트랙 파일은 그대로
-  const boostSeg = course.segs.filter((s) => s.kind === 'straight').reduce((a, b) => (b.length > a.length ? b : a));
+  // OT-6 부스트 구간: 트랙에서 가장 긴 직선(같으면 앞 구간) 1곳, 그 직선 시작점에서 감지해 직선 끝까지.
+  // 구간 모드(boostZone)이고 트랙에 구간이 있으면 그 직선, 감지는 앞 코너 진입점, 끝은 E1 고정 끝 (DIRECTION 초안 §4, F-B2)
+  const zone = o.boostZone && track.boostZone ? course.segs.find((s) => s.id === track.boostZone) : undefined;
+  if (o.boostZone && track.boostZone && zone?.kind !== 'straight') throw new Error(`트랙 ${track.id}: 부스트 구간 ${track.boostZone}이 직선이 아니다`);
+  const boostSeg = zone ?? course.segs.filter((s) => s.kind === 'straight').reduce((a, b) => (b.length > a.length ? b : a));
+  const zonePrev = zone && course.segs[(course.segs.indexOf(zone) - 1 + course.segs.length) % course.segs.length];
+  const boostDetect = zonePrev ? zonePrev.start : boostSeg.start;
+  const boostLen = zone && zonePrev ? boostZoneLength(zone.length, zonePrev.bend, zone.next!.bend) : boostSeg.length;
+  if (!(boostLen > 0)) throw new Error(`트랙 ${track.id}: 부스트 구간 길이 ${boostLen} ≤ 0 (F-B2)`);
   const crossed = (from: number, to: number, at: number) => Math.floor((from - at) / L) < Math.floor((to - at) / L);
   // OT-4 추월 기록: 앞뒤가 바뀐 뒤 PASS_HOLD_SECONDS 유지되면 기록
   const pendingPasses: { tick: number; passer: Car; passed: Car; cause: string; attempt: boolean; where: { lap: number; segment: string } }[] = [];
@@ -274,7 +285,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     const recent = (t0: number) => tick - t0 <= holdTicks;
     if (recent(passer.lastContact) || recent(passed.lastContact)) return 'contact';
     if (recent(passed.lastMistake)) return 'mistake';
-    if (passer.s < passer.boostUntil) return 'boost';
+    if (passer.s >= passer.boostFrom && passer.s < passer.boostUntil) return 'boost';
     const pp = phaseOf(passer);
     if (pp === 'brake' || phaseOf(passed) === 'brake') return 'brake';
     return pp;
@@ -556,11 +567,14 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         if (c.passive) updatePassive(c, t);
       }
 
-      // OT-6 부스트: 구간 시작점을 지날 때 추격 상태면 그 직선 동안
+      // OT-6 부스트: 감지 지점을 지날 때 추격 상태면 그 구간 동안
       if (o.boost > 0)
         for (const c of act) {
-          if (!crossed(before[c.i], c.s, boostSeg.start) || !chasing.has(c)) continue;
-          c.boostUntil = c.s - ((c.s - boostSeg.start) % L) + boostSeg.length;
+          if (!crossed(before[c.i], c.s, boostDetect) || !chasing.has(c)) continue;
+          const detectAt = c.s - ((c.s - boostDetect) % L);
+          const zoneStart = detectAt + ((boostSeg.start - boostDetect + L) % L);
+          c.boostFrom = zone ? zoneStart : -Infinity;
+          c.boostUntil = zoneStart + boostLen;
           c.log.boosts++;
           judge(JudgementKind.boost, [c.i]);
         }
@@ -601,7 +615,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
               if (cycle) continue;
               loser.yieldTo = winner.i;
               loser.yieldEnd = cornerStart + sg.length;
-              loser.yieldFloor = C.YIELD_MIN_RATIO * vCorner(loser.p, sg.bend);
+              loser.yieldFloor = o.yieldMinRatio * vCorner(loser.p, sg.bend);
               judge(JudgementKind.cornerPriority, [winner.i, loser.i], `winner:${winner.i}:${why}`);
             }
           }
@@ -657,8 +671,9 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
   // 슬립스트림 (INT §4.6 SS-1)과 코너 설계자 탈출 가속 (INT §6.1)을 반영한 이번 틱 능력치
   function effParams(c: Car): CarParams {
     let { vTop, A, vg } = c.p;
-    if (slipOn(c)) {
-      vTop *= 1 + o.slipRatio;
+    const slip = slipOn(c);
+    if (slip) {
+      if (!zone) vTop *= 1 + o.slipRatio;
       A *= 1 + o.slipRatio;
     }
     if (c.passive === 'corner-architect' && c.ps.state === 'active') A *= c.ps.aMul;
@@ -666,8 +681,10 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     if (o.dirtyAir > 0 && chasing.has(c)) vg *= 1 - o.dirtyAir / 100;
     // CT-2 라인 정확도: 횡 오차만큼 코너 한계(와 그 앞 제동 기준)를 낮춘다. ε_max = e0(제어 0일 때 범위), 비율은 1에서 자름
     if (o.ctLine > 0) vg *= 1 - o.ctLine * Math.min(1, Math.abs(c.eps) / C.LAT_ERR_E0);
-    // OT-6 부스트 중 최고속도 +y%
-    if (c.s < c.boostUntil) vTop *= 1 + o.boost / 100;
+    // OT-6 부스트 중 최고속도 +y%. 구간 모드는 슬립스트림과 겹치면 최고속도 보너스는 큰 값만 (Q-80 가안)
+    const boosting = c.s >= c.boostFrom && c.s < c.boostUntil;
+    if (zone) vTop *= 1 + Math.max(slip ? o.slipRatio : 0, boosting ? o.boost / 100 : 0);
+    else if (boosting) vTop *= 1 + o.boost / 100;
     return vTop === c.p.vTop && A === c.p.A && vg === c.p.vg ? c.p : { ...c.p, vTop, A, vg };
   }
 

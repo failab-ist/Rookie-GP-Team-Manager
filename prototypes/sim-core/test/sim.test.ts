@@ -67,3 +67,48 @@ test('사건 정렬과 중복 제거: 모든 필드가 같을 때만 합친다',
   const early = makeEvent(1, EventKind.lap, [9], at);
   assert.deepEqual(sortEvents([b, a, a, early]), [early, a, b]);
 });
+
+test('부스트 구간 E1 고정 끝: M1-S4 (L-B) L_z = 468 − 57.8704 = 410.1296 u (DIRECTION 초안 F-B2)', async () => {
+  const { boostZoneLength } = await import('../src/trackCheck.ts');
+  assert.ok(Math.abs(boostZoneLength(468, 1.5, 0.9) - 410.1296) < 1e-4);
+});
+
+test('부스트 구간 모드는 구간 데이터가 없는 트랙(T1)에서 결과를 바꾸지 않는다', async () => {
+  const { OT_FLOW_ALL } = await import('../src/config.ts');
+  const T1 = JSON.parse(readFileSync(new URL('../data/tracks/T1.json', import.meta.url), 'utf8'));
+  const run = (boostZone: boolean) => {
+    const r = simulate(input({ track: T1 }), { ...OT_FLOW_ALL, boostZone });
+    return JSON.stringify({ ...r, header: null });
+  };
+  assert.equal(run(true), run(false));
+});
+
+test('부스트 구간 모드: 부스트는 구간(M1-S4) 안에서만 최고속도를 올린다', async () => {
+  const { MOTIF_ALL } = await import('../src/config.ts');
+  const M1 = JSON.parse(readFileSync(new URL('../data/tracks/motif/M1-LB.json', import.meta.url), 'utf8'));
+  const r = simulate(input({ track: M1 }), { ...MOTIF_ALL, slipstream: false });
+  const boosts = r.judgements.filter((j) => j.kind === 9);
+  assert.ok(boosts.length > 0);
+  // 감지는 앞 코너(헤어핀 M1-C3) 진입점
+  assert.ok(boosts.every((j) => j.segment === 'M1-C3'));
+  // 틱 평균 속도가 자기 V_top을 넘는 곳은 구간 [M1-S4 시작, 시작 + L_z] 안뿐이고, 거기서도 V_top × 1.04 이하 (슬립스트림 끔)
+  const { carParams } = await import('../src/physics.ts');
+  const { boostZoneLength } = await import('../src/trackCheck.ts');
+  const L = M1.segments.reduce((x: number, g: { length: number }) => x + g.length, 0);
+  const z0 = 324 + 54 + 162 + 72 + 144 + 72;
+  const z1 = z0 + boostZoneLength(468, 1.5, 0.9);
+  let above = 0;
+  r.frames.slice(1).forEach((p, k) =>
+    p.forEach((x, i) => {
+      const vTop = carParams(example.entries[i].car.stats).vTop;
+      const v = (x - r.frames[k][i]) / r.header.tickSeconds;
+      const m = (((r.frames[k][i] % L) + L) % L);
+      if (v > vTop + 1e-9) {
+        above++;
+        assert.ok(m >= z0 - 1e-9 && m <= z1 + 10, `차${i} ${m.toFixed(1)}u에서 ${v.toFixed(2)} > V_top ${vTop}`);
+        assert.ok(v <= vTop * 1.04 + 1e-9);
+      }
+    }),
+  );
+  assert.ok(above > 0);
+});

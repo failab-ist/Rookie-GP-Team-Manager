@@ -43,6 +43,7 @@ export type TrackSegment = {
 export type Track = {
   id: string;
   segments: TrackSegment[];
+  boostZone?: string; // 부스트 구간 직선 id (DIRECTION 초안 §4 Z1, 가안). 없으면 OT-6 구간 모드에서도 가장 긴 직선
 };
 
 // 참가자 세팅 1대분
@@ -138,6 +139,8 @@ export type RaceOptions = {
   dirtyAir: number; // OT-5 추격 상태 접지 한계 감소 % (0 = 꺼짐)
   boost: number; // OT-6 부스트 구간 최고속도 증가 % (0 = 꺼짐)
   cornerPriority: boolean; // OT-7 코너 우선권
+  yieldMinRatio: number; // OT-7 양보 감속 하한 비율 (자기 코너 한계 × 이 값)
+  boostZone: boolean; // OT-6 구간 모드 (트랙 데이터 구간 · 앞 코너 진입 감지 · E1 고정 끝 · 슬립스트림과 큰 값만)
   // 접촉 규칙 정리 스위치 (AG-P039 A, AG-P040 A, 기본 꺼짐)
   ctWobble: boolean; // CT-1 평소 횡 오차를 차선 여유 안으로 (실수 때만 넘음)
   ctLine: number; // CT-2 라인 정확도: 코너 한계 × (1 − c_line × |ε| / ε_max). 0 = 꺼짐
