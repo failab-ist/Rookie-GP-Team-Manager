@@ -1,7 +1,8 @@
 // 모티브 트랙 3종 × 축소안 3종 다시 재기와 차 · 레이서 비중 (지시서 2026-11-02).
 // 트랙 = PROTO_TRACKS_MOTIF_DRAFT.md §7 × §8.1 ρ, 부스트 구간 = PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md §4 Z1. 계수는 바꾸지 않는다.
 // node qa/motif.ts <tracks|race:LA|race:LB|race:LC|yield|share> > <파일>.md (부분마다 따로 돌려 이어 붙인다)
-import { EXIT_LIMIT_RELAX, MOTIF_ALL, PASS_CAUSE_ORDER, QA_CONFIRM_SEEDS, YIELD_MIN_COMPARE } from '../src/config.ts';
+// node qa/motif.ts share [confirm|adjust] [차 폭]   시드 묶음(기본 확인용)과 측정용 차 폭 옵션 carWidth(주지 않으면 config 기본값)
+import { EXIT_LIMIT_RELAX, MOTIF_ALL, PASS_CAUSE_ORDER, QA_ADJUST_SEEDS, QA_CONFIRM_SEEDS, YIELD_MIN_COMPARE } from '../src/config.ts';
 import { buildCourse, carParams, runSolo, at } from '../src/physics.ts';
 import { checkTrack } from '../src/trackCheck.ts';
 import type { CarStats, Entry, RaceOptions, Track } from '../src/types.ts';
@@ -13,8 +14,8 @@ const MOTIFS = ['M1', 'M2', 'M3'];
 const trackOf = (m: string, sc: Scale): Track => load(`../data/tracks/motif/${m}-${sc}.json`);
 const ALL = MOTIFS.flatMap((m) => (Object.keys(SCALES) as Scale[]).map((sc) => trackOf(m, sc)));
 ALL.forEach(registerTrack);
-const SEEDS = QA_CONFIRM_SEEDS;
-const FINAL: Partial<RaceOptions> = { reaction: false, slipstream: true, ...MOTIF_ALL };
+const SEEDS = process.argv[2] === 'share' && process.argv[3] === 'adjust' ? QA_ADJUST_SEEDS : QA_CONFIRM_SEEDS;
+const FINAL: Partial<RaceOptions> = { reaction: false, slipstream: true, ...MOTIF_ALL, ...(process.argv[2] === 'share' && process.argv[4] ? { carWidth: Number(process.argv[4]) } : {}) };
 // 손계산 1랩 steady · 3랩 합계 (PROTO_TRACKS_MOTIF_DRAFT.md:470-478, F7 k = 0)
 const HAND: Record<string, [number, number]> = {
   'M1-LA': [12.96, 39.82], 'M1-LB': [18.57, 56.63], 'M1-LC': [25.04, 76.07],

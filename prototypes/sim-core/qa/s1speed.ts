@@ -1,6 +1,6 @@
 // S1 실패 순간 두 차 속도 확인 (측정만, 기본값 그대로. 지시서 2026-11-02). src는 바꾸지 않고 frames · trace · 판정 기록으로 다시 계산한다.
 // 조건은 s1cap.ts 기준 설정과 같다: L-B 3트랙, MOTIF_ALL, 참가 10대, 출발 순서 10가지 순환.
-// node qa/s1speed.ts collect <adjust|confirm> <M1|M2|M3> > <파일>.json
+// node qa/s1speed.ts collect <adjust|confirm> <M1|M2|M3> [차 폭] > <파일>.json   (차 폭: 측정용 옵션 carWidth, 주지 않으면 config 기본값)
 // node qa/s1speed.ts report <json 파일들>
 //
 // 시간축 (s1cap.ts 머리 주석과 같음): frames[k] = 틱 k 이동 뒤, trace[T-1] = 틱 T.
@@ -18,9 +18,10 @@ import type { RaceOptions, Track } from '../src/types.ts';
 import { BASE, f, load, mean, opponents, out, STUCK, table, testCar, tryRace } from './lib.ts';
 
 const N = 10;
-const FINAL: Partial<RaceOptions> = { reaction: false, slipstream: true, ...C.MOTIF_ALL };
+const [part, set, trackArg, widthArg] = process.argv.slice(2);
+const W = widthArg ? Number(widthArg) : C.CAR_WIDTH;
+const FINAL: Partial<RaceOptions> = { reaction: false, slipstream: true, ...C.MOTIF_ALL, ...(widthArg ? { carWidth: W } : {}) };
 const rotate = (k: number) => Array.from({ length: N }, (_, slot) => (slot - k + N) % N);
-const [part, set, trackArg] = process.argv.slice(2);
 const ONE_S = Math.round(1 / C.TICK_SECONDS);
 
 type Rec = { kind: 'S1' | 'segEnd' | 'abort'; rA: number; rD: number; overlap: number; seg: 'straight' | 'corner'; left: number; margin: number; past: number; brk: null | { rA: number; rD: number; overlap: number; left: number; secs: number }; rel: null | { v: number; r: number; slipBefore: number; slipAt: number; dv1: number; dvLen: number; gap: number } };
@@ -78,7 +79,7 @@ if (part === 'collect') {
         let Tr = -1;
         for (let T = T0 + 1; T <= T1; T++) {
           const [, from, to, prog] = tr[T - 2][a];
-          if (from !== orig || (to !== from && C.LANE_WIDTH * Math.abs(to - from) * prog >= C.CAR_WIDTH)) {
+          if (from !== orig || (to !== from && C.LANE_WIDTH * Math.abs(to - from) * prog >= W)) {
             Tr = T;
             break;
           }
