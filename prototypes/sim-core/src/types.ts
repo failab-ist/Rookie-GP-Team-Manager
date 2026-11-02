@@ -112,6 +112,8 @@ export type CarStatsLog = {
   passesS1: number; // 그중 정식 시도 중 앞지른 수
   passCauses: Record<string, number>;
   boosts: number;
+  contactsCaused: number; // CT-4 원인 제공 접촉 (공동 책임 포함)
+  contactsSuffered: number; // CT-4 원인 제공이 아닌 접촉 (레이싱 사고 포함)
   passiveActivations: number;
   drawbacks: Record<string, number>;
   solver: { opportunities: number; forfeits: number; successesActive: number; successesInactive: number };
@@ -136,6 +138,10 @@ export type RaceOptions = {
   dirtyAir: number; // OT-5 추격 상태 접지 한계 감소 % (0 = 꺼짐)
   boost: number; // OT-6 부스트 구간 최고속도 증가 % (0 = 꺼짐)
   cornerPriority: boolean; // OT-7 코너 우선권
+  // 접촉 규칙 정리 스위치 (AG-P039 A, AG-P040 A, 기본 꺼짐)
+  ctWobble: boolean; // CT-1 평소 횡 오차를 차선 여유 안으로 (실수 때만 넘음)
+  ctLine: number; // CT-2 라인 정확도: 코너 한계 × (1 − c_line × |ε| / ε_max). 0 = 꺼짐
+  ctContact: boolean; // CT-3 접촉 3종(옆 · 차선 변경 중 · 뒤 추돌)별 손실과 위치 처리
 };
 
 // QA 전용: 출발 위치를 직접 정하고(대수 제한 없음) 틱별 상태를 기록한다. 경기 규칙이 아니다
@@ -143,8 +149,8 @@ export type QaHooks = {
   start?: { s: number; lane: number; v: number }[];
   trace?: boolean;
 };
-// trace[틱][차] = [속도, from 차선, to 차선, 변경 진행, 막힘 상한 적용 0/1, 슬립스트림 적용 0/1]
-export type TraceRow = [number, number, number, number, number, number];
+// trace[틱][차] = [속도, from 차선, to 차선, 변경 진행, 막힘 상한 적용 0/1, 슬립스트림 적용 0/1, 횡 오차 ε, 실수 중 0/1]
+export type TraceRow = [number, number, number, number, number, number, number, number];
 
 export type RaceHeader = {
   seed: number;

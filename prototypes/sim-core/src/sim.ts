@@ -36,6 +36,9 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   dirtyAir: C.DIRTY_AIR,
   boost: C.BOOST,
   cornerPriority: C.CORNER_PRIORITY,
+  ctWobble: C.CT_WOBBLE,
+  ctLine: C.CT_LINE,
+  ctContact: C.CT_CONTACT,
 };
 
 // 막힘 상한 v_cap (INT §4.2). gap = 같은 차선 앞뒤 간격 g
@@ -76,6 +79,7 @@ type Car = {
   yieldEnd: number; // OT-7 그 코너 끝 누적 거리
   lastMistake: number; // 혼전 실수 틱
   lastContact: number; // 접촉 시작 틱
+  inMistake: boolean; // 지금 횡 오차가 혼전 실수로 뽑힌 값인지 (CT-1, CT-4)
   cornerEntryV: number; // 지금 코너에 들어설 때 속도 (OT-7 보조 규칙)
 };
 
@@ -131,6 +135,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       passesS1: 0,
       passCauses: {},
       boosts: 0,
+      contactsCaused: 0,
+      contactsSuffered: 0,
     },
     vPrev: 0,
     pendingReturn: null,
@@ -139,6 +145,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     yieldEnd: -Infinity,
     lastMistake: -Infinity,
     lastContact: -Infinity,
+    inMistake: false,
     cornerEntryV: 0,
   }));
   if (o.interaction) {
@@ -422,7 +429,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
       }
 
       // 이동 (막힘 상한, 슬립스트림, 패시브 반영)
-      const row: TraceRow[] = cars.map((c) => [c.v, c.from, c.to, c.prog, 0, 0]);
+      const row: TraceRow[] = cars.map((c) => [c.v, c.from, c.to, c.prog, 0, 0, c.eps, c.inMistake ? 1 : 0]);
       for (const c of act) {
         const p = effParams(c);
         const capV = cap.get(c) ?? Infinity;
@@ -461,25 +468,60 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
             st.offTicks = 0;
             st.sinceFix = 0;
             const side = changing(a) || changing(b) || a.from !== b.from;
-            events.push(makeEvent(tick, EventKind.contact, [a.i, b.i], where(Math.min(a.i, b.i)), null, side ? 'side' : 'rear'));
+            // CT-4 접촉 종류와 원인 제공자 (항상 기록). 종류: lane = 하나라도 차선 변경 중, side = 다른 차선, rear = 같은 차선
+            // 원인: 실수한 차 > 차선을 바꾸던 차 > 뒤에서 들이받은 차 > 레이싱 사고(none). 같은 기준에 둘 다 걸리면 both (가안)
+            const kind = changing(a) || changing(b) ? 'lane' : a.from !== b.from ? 'side' : 'rear';
+            const [rearCar, frontCar] = a.s <= b.s ? [a, b] : [b, a];
+            const pick = (basis: string, xs: Car[]) => (xs.length ? { basis, who: xs } : null);
+            const resp =
+              pick('mistake', [a, b].filter((x) => x.inMistake)) ??
+              pick('lane', [a, b].filter(changing)) ??
+              (kind === 'rear' ? { basis: 'rear', who: [rearCar] } : { basis: 'none', who: [] as Car[] });
+            const whoCode = resp.who.length === 2 ? 'both' : resp.who.length ? String(resp.who[0].i) : '-';
+            events.push(makeEvent(tick, EventKind.contact, [a.i, b.i], where(Math.min(a.i, b.i)), null, `${kind}:${resp.basis}:${whoCode}`));
+            for (const x of [a, b]) {
+              if (resp.who.includes(x)) x.log.contactsCaused++;
+              else x.log.contactsSuffered++;
+            }
             a.log.contacts++;
             b.log.contacts++;
             a.lastContact = b.lastContact = tick;
-            if (tick - st.releasedAt >= ticksOf(C.CONTACT_RELOSS_SECONDS)) {
-              a.v *= 1 - C.CONTACT_LOSS; // 두 차 모두, 여러 쌍이면 곱 (INT Q-51)
-              b.v *= 1 - C.CONTACT_LOSS;
-            }
+            const lossOk = tick - st.releasedAt >= ticksOf(C.CONTACT_RELOSS_SECONDS);
             for (const c of [a, b]) if (side && c.passive === 'gap-hunter' && c.ps.state === 'active') passiveEvent(c, 'T-A');
-            // 위치 처리: 차선을 바꾸던 차를 되돌린다(둘 다면 슬롯 번호가 큰 차). 아니면 뒤차를 뒤로 (INT R4-5)
-            if (changing(a) && changing(b)) revert(a.i > b.i ? a : b);
-            else if (changing(a)) revert(a);
-            else if (changing(b)) revert(b);
-            else fixPosition(a, b);
+            if (!o.ctContact) {
+              if (lossOk) {
+                a.v *= 1 - C.CONTACT_LOSS; // 두 차 모두, 여러 쌍이면 곱 (INT Q-51)
+                b.v *= 1 - C.CONTACT_LOSS;
+              }
+              // 위치 처리: 차선을 바꾸던 차를 되돌린다(둘 다면 슬롯 번호가 큰 차). 아니면 뒤차를 뒤로 (INT R4-5)
+              if (changing(a) && changing(b)) revert(a.i > b.i ? a : b);
+              else if (changing(a)) revert(a);
+              else if (changing(b)) revert(b);
+              else fixPosition(a, b);
+            } else if (kind === 'side') {
+              // CT-3 옆 접촉: 두 차 3%, 위치 이동 없음, 각자 차선 중심으로
+              if (lossOk) for (const x of [a, b]) x.v *= 1 - C.CT_LOSS_MINOR;
+              a.eps = b.eps = 0;
+            } else if (kind === 'lane') {
+              // CT-3 차선 변경 중 접촉: 바꾸던 차 12%(둘 다면 둘 다), 다른 차 3%. 바꾸던 차는 되돌린다(지금 규칙)
+              if (lossOk) for (const x of [a, b]) x.v *= 1 - (changing(x) ? C.CT_LOSS_MAJOR : C.CT_LOSS_MINOR);
+              if (changing(a) && changing(b)) revert(a.i > b.i ? a : b);
+              else revert(changing(a) ? a : b);
+            } else {
+              // CT-3 뒤 추돌: 뒤차 12%, 앞차 3%. 뒤차를 앞차 뒤로 (지금 규칙)
+              if (lossOk) {
+                rearCar.v *= 1 - C.CT_LOSS_MAJOR;
+                frontCar.v *= 1 - C.CT_LOSS_MINOR;
+              }
+              fixPosition(a, b);
+            }
           } else if (touching && st.on) {
             st.offTicks = 0;
             if (++st.sinceFix >= ticksOf(C.CONTACT_FORCE_SECONDS)) {
               st.sinceFix = 0;
-              fixPosition(a, b); // 무한 지속 방지 (INT R4-6)
+              // 무한 지속 방지 (INT R4-6). CT-3 옆 접촉은 위치를 옮기지 않고 차선 중심으로
+              if (o.ctContact && !changing(a) && !changing(b) && a.from !== b.from) a.eps = b.eps = 0;
+              else fixPosition(a, b);
             }
           } else if (!touching && st.on && ++st.offTicks >= ticksOf(C.CONTACT_SEPARATE_SECONDS)) {
             st.on = false;
@@ -495,13 +537,18 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         if (tick % decTicks === 0) {
           const rng = epsRng[c.i];
           let mul = 1;
+          let mistake = false;
           if (nearCount(c, C.PACK_RADIUS) >= C.PACK_COUNT && rng() >= pFocus(stats)) {
             mul *= C.MISTAKE_EPS_MUL; // 혼전 실수 (S-A 집중)
             c.log.mistakes++;
             c.lastMistake = tick;
+            mistake = true;
           }
           if (solverActive(c)) mul *= C.SOLVER_EPS_MUL;
-          c.eps = (2 * rng() - 1) * lateralErr(stats) * mul;
+          const e = (2 * rng() - 1) * lateralErr(stats) * mul;
+          // CT-1: 평소 흔들림은 차선 여유 안으로 자른다. 실수일 때만 넘는다
+          c.eps = o.ctWobble && !mistake ? Math.max(-C.LANE_SLACK, Math.min(C.LANE_SLACK, e)) : e;
+          c.inMistake = mistake;
         }
         if (c.passive) updatePassive(c, t);
       }
@@ -613,6 +660,8 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     if (c.passive === 'corner-architect' && c.ps.state === 'active') A *= c.ps.aMul;
     // OT-5 더티 에어: 추격 상태면 접지 한계(코너 한계와 그 앞 제동 기준)를 x% 낮춘다
     if (o.dirtyAir > 0 && chasing.has(c)) vg *= 1 - o.dirtyAir / 100;
+    // CT-2 라인 정확도: 횡 오차만큼 코너 한계(와 그 앞 제동 기준)를 낮춘다. ε_max = e0(제어 0일 때 범위), 비율은 1에서 자름
+    if (o.ctLine > 0) vg *= 1 - o.ctLine * Math.min(1, Math.abs(c.eps) / C.LAT_ERR_E0);
     // OT-6 부스트 중 최고속도 +y%
     if (c.s < c.boostUntil) vTop *= 1 + o.boost / 100;
     return vTop === c.p.vTop && A === c.p.A && vg === c.p.vg ? c.p : { ...c.p, vTop, A, vg };

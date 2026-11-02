@@ -82,3 +82,19 @@ test('추월 5단계 흐름 묶음(OT_FLOW_ALL): 같은 입력 두 번이 바이
     }
   }
 });
+
+test('접촉 규칙 묶음(CT_ALL): 결정론, 음수 속도 없음, 접촉 기록은 종류:책임 기준:원인 제공자 형식', async () => {
+  const { OT_FLOW_ALL, CT_ALL, LANE_SLACK } = await import('../src/config.ts');
+  for (const track of tracks) {
+    const opts = { ...OT_FLOW_ALL, ...CT_ALL, slipstream: true };
+    const a = simulate({ seed: 9, track, laps: 3, entries: lineup }, opts, { trace: true });
+    assert.equal(JSON.stringify(a), JSON.stringify(simulate({ seed: 9, track, laps: 3, entries: lineup }, opts, { trace: true })), track.id);
+    // CT-1: 실수가 아닐 때 횡 오차는 차선 여유 안
+    assert.ok(a.trace!.every((row) => row.every((c) => c[0] >= 0 && (c[7] === 1 || Math.abs(c[6]) <= LANE_SLACK + 1e-12))));
+    for (const e of a.events.filter((x) => x.kind === 4)) {
+      const [kind, basis, who] = e.cause!.split(':');
+      assert.ok(['side', 'lane', 'rear'].includes(kind) && ['mistake', 'lane', 'rear', 'none'].includes(basis), e.cause!);
+      assert.ok(who === 'both' || who === '-' || e.cars.includes(Number(who)));
+    }
+  }
+});

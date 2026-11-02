@@ -96,6 +96,16 @@ export const PASS_HOLD_SECONDS = 1.0; // 가안, OT-4 앞뒤가 바뀐 뒤 이 �
 // OT-4 원인 우선순위 (가안, UNRESOLVED): 접촉 > 상대 실수 > 부스트 > 제동 구간 > 코너(접지) > 탈출(가속) > 직선(최고속도)
 export const PASS_CAUSE_ORDER = ['contact', 'mistake', 'boost', 'brake', 'corner', 'exit', 'straight'] as const;
 // 모두 켠 설정은 이름 붙인 묶음으로만 쓴다 (기본값 아님). 부스트는 비교값 가운데 5 (가안)
+// ---------- 접촉 규칙 정리 (AG-P039 A, AG-P040 A). 새 규칙은 모두 기본 꺼짐 ----------
+export const CT_WOBBLE = false; // CT-1
+export const LANE_SLACK = (LANE_WIDTH - CAR_WIDTH) / 2; // CT-1 차선 여유 = 0.5 u (계산값)
+export const CT_LINE = 0; // CT-2 c_line. 켤 때 가안 0.02 (최대 2%, 근거 없음)
+export const CT_LINE_ON = 0.02; // 가안, 근거 없음 (지시서 2026-11-02)
+export const CT_CONTACT = false; // CT-3
+export const CT_LOSS_MAJOR = 0.12; // 가안, CT-3 차선 변경 중인 차 · 뒤에서 들이받은 차 손실 (INT §4.4 loss와 같은 값)
+export const CT_LOSS_MINOR = 0.03; // 가안, 근거 없음. CT-3 옆 접촉 두 차 · 그 밖의 상대 차 손실
+// 모두 켠 설정은 이름 붙인 묶음으로만 (기본값 아님)
+export const CT_ALL = { ctWobble: true, ctLine: CT_LINE_ON, ctContact: true };
 export const OT_FLOW_ALL = { desiredSpeed: 'target' as const, otRelease: true, otSpanCorner: true, dirtyAir: DIRTY_AIR_ON, boost: 5, cornerPriority: true };
 export const DEFAULT_INNER_LANE = 0; // 가안, 근거 없음. 코너 방향 데이터가 없어 모든 코너 안쪽 = 0번 (디렉터 2026-11-02)
 
