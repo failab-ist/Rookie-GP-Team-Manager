@@ -112,6 +112,7 @@ export type RaceSummary = {
   aborts: number;
   contacts: number;
   contactKinds: Record<string, number>;
+  contactBasis: Record<string, number>; // CT-4 원인 기준 (mistake · lane · rear · none)
   passCauses: Record<string, number>;
   ticks: number;
   overtakeSegs: string[];
@@ -124,7 +125,8 @@ export const summarize = (r: ReturnType<typeof simulate>): RaceSummary => ({
   overtakesS1: r.events.filter((e) => e.kind === 3 && e.cause?.includes(':S1:')).length,
   s1: r.carStats.reduce((a, c) => a + c.successes, 0),
   passCauses: countBy(r.events.filter((e) => e.kind === 3).map((e) => e.cause!.split(':')[0])),
-  contactKinds: countBy(r.events.filter((e) => e.kind === 4).map((e) => `${e.cause}:${segKind(r.header.trackId, e.segment)}`)),
+  contactBasis: countBy(r.events.filter((e) => e.kind === 4).map((e) => e.cause!.split(':')[1] ?? '?')),
+  contactKinds: countBy(r.events.filter((e) => e.kind === 4).map((e) => `${e.cause!.split(':')[0]}:${segKind(r.header.trackId, e.segment)}`)),
   tries: r.carStats.reduce((a, c) => a + c.tries, 0),
   aborts: r.judgements.filter((j) => j.kind === 3).length, // 목표 차선 창에 차가 들어와 되돌아옴
   contacts: r.carStats.reduce((a, c) => a + c.contacts, 0) / 2,
