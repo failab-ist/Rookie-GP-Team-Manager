@@ -4,7 +4,7 @@
 import { CT_ALL, OT_FLOW_ALL, PASS_CAUSE_ORDER, QA_CONFIRM_SEEDS, TICK_SECONDS } from '../src/config.ts';
 import { simulate } from '../src/sim.ts';
 import type { Entry, RaceOptions, RacerStats } from '../src/types.ts';
-import { BASE, f, layer2, mean, out, race, RACERS, STAT_KO, STATS, table, testCar, TRACKS } from './lib.ts';
+import { BASE, f, layer2, mean, out, printStuck, RACERS, STAT_KO, STATS, table, testCar, TRACKS, tryRace } from './lib.ts';
 import { CT_STAGES } from './ctstages.ts';
 
 const SEEDS = QA_CONFIRM_SEEDS;
@@ -117,7 +117,7 @@ const focusRows = (
     ['집중 7 (3/5/7)', { overtake: 3, control: 5, focus: 7 }],
   ] as [string, RacerStats][]
 ).map(([name, st]) => {
-  const runs = TRACKS.flatMap((t) => SEEDS.map((s) => race(t, s, testCar(BASE, { id: 'test', stats: st, passiveId: null }), FINAL)));
+  const runs = TRACKS.flatMap((t) => SEEDS.map((s) => tryRace(t, s, testCar(BASE, { id: 'test', stats: st, passiveId: null }), FINAL))).filter((r) => r !== null);
   const c = runs.map((r) => r.carStats[0]);
   return [name, f(mean(c.map((x) => x.mistakes)), 2), f(mean(c.map((x) => x.contactsCaused)), 2), f(mean(c.map((x) => x.contactsSuffered)), 2), f(mean(runs.map((r) => r.finishOrder.indexOf(0) + 1)), 2)];
 });
@@ -128,7 +128,7 @@ out(table(['레이서', '혼전 실수', '원인 제공 접촉', '당한 접촉'
 
 // 3) 레이서 A, B, C
 const racerRows = RACERS.map((racer) => {
-  const runs = TRACKS.flatMap((t) => SEEDS.map((s) => race(t, s, testCar(BASE, racer), FINAL)));
+  const runs = TRACKS.flatMap((t) => SEEDS.map((s) => tryRace(t, s, testCar(BASE, racer), FINAL))).filter((r) => r !== null);
   const c = runs.map((r) => r.carStats[0]);
   return [
     racer.id,
@@ -145,3 +145,4 @@ out('### 레이서 A, B, C (기준 차, 테스트 차 1대 기준)');
 out();
 out(table(['레이서', '패시브', '추월(OT-4)', '원인 제공 접촉', '당한 접촉', '혼전 실수', '평균 순위'], racerRows));
 }
+printStuck();

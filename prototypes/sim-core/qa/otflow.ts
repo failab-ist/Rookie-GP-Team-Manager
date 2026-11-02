@@ -3,7 +3,7 @@
 // node qa/otflow.ts > qa/results/<파일>.md
 import { OT_FLOW_ALL, PASS_CAUSE_ORDER, QA_CONFIRM_SEEDS } from '../src/config.ts';
 import type { RaceOptions } from '../src/types.ts';
-import { BASE, f, layer2, mean, out, race, RACERS, STAT_KO, STATS, table, testCar, TRACKS } from './lib.ts';
+import { BASE, f, layer2, mean, out, printStuck, RACERS, STAT_KO, STATS, table, testCar, TRACKS, tryRace } from './lib.ts';
 import { STAGES } from './otstages.ts';
 
 const COMMON: Partial<RaceOptions> = { reaction: false, slipstream: true };
@@ -75,7 +75,7 @@ out(table(['단계', '접촉 합', '뒤 추돌 · 직선', '뒤 추돌 · 코너
 
 // 레이서 비교 (마지막 단계 = OT_FLOW_ALL, 부스트 5%)
 const racerRows = RACERS.map((racer) => {
-  const runs = TRACKS.flatMap((t) => SEEDS.map((s) => race(t, s, testCar(BASE, racer), { ...COMMON, ...OT_FLOW_ALL })));
+  const runs = TRACKS.flatMap((t) => SEEDS.map((s) => tryRace(t, s, testCar(BASE, racer), { ...COMMON, ...OT_FLOW_ALL }))).filter((r) => r !== null);
   const c = runs.map((r) => r.carStats[0]);
   return [
     racer.id,
@@ -92,3 +92,4 @@ out();
 out('## 레이서 A, B, C (마지막 단계: OT_FLOW_ALL, 부스트 5%, 기준 차, 확인용 150레이스, 테스트 차 1대 기준)');
 out();
 out(table(['레이서', '패시브', '추월(OT-4)', '그중 S1 시도 중', 'S1 성공', '추월 시도', '접촉', '평균 순위'], racerRows));
+printStuck();

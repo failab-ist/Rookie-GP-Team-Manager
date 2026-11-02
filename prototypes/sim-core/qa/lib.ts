@@ -96,6 +96,22 @@ const opponents = (): Entry[] =>
   L2_OPPONENTS.map((o, i) => ({ racer: { id: `npc-${i + 1}`, stats: NPC, passiveId: null }, car: { id: `O${i + 1}`, stats: toStats(o) } }));
 export const race = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>) =>
   simulate({ seed, track, laps: 3, entries: [test, ...opponents()] }, { k: EXIT_LIMIT_RELAX, ...opts });
+// 멈춘 레이스(600초 안에 안 끝남): 고치지 않고 기록하고 집계에서 뺀다 (디렉터 2026-11-02)
+export const STUCK: string[] = [];
+export const tryRace = (track: Track, seed: number, test: Entry, opts: Partial<RaceOptions>) => {
+  try {
+    return race(track, seed, test, opts);
+  } catch (e) {
+    STUCK.push(`${(e as Error).message} | 테스트 차 ${JSON.stringify(test.car.stats)} 레이서 ${JSON.stringify(test.racer.stats)} | 설정 ${JSON.stringify(opts)}`);
+    return null;
+  }
+};
+export const printStuck = () => {
+  out();
+  out(`## 멈춘 레이스 (집계에서 뺌): ${STUCK.length}건`);
+  out();
+  for (const x of STUCK) out(`- ${x}`);
+};
 export const testCar = (stats: CarStats, racer: Entry['racer'] = { id: 'test', stats: NPC, passiveId: null }): Entry => ({
   racer,
   car: { id: 'test', stats },
@@ -133,23 +149,32 @@ export const summarize = (r: ReturnType<typeof simulate>): RaceSummary => ({
   ticks: r.ticks,
   overtakeSegs: r.events.filter((e) => e.kind === 3).map((e) => e.segment),
 });
-const origCache = new Map<string, RaceSummary>();
+const origCache2 = new Map<string, RaceSummary | null>();
 export const origRun = (opts: Partial<RaceOptions>, track: Track, seed: number) => {
   const key = `${JSON.stringify(opts)}|${track.id}|${seed}`;
-  if (!origCache.has(key)) origCache.set(key, summarize(race(track, seed, testCar(BASE), opts)));
-  return origCache.get(key)!;
+  if (!origCache2.has(key)) {
+    const r = tryRace(track, seed, testCar(BASE), opts);
+    origCache2.set(key, r && summarize(r));
+  }
+  return origCache2.get(key)!;
 };
 
 // 2층 재정의 다섯 지표 (INT §9.2, M-17 · M-18)
 export function layer2(tracks: Track[], seeds: number[], opts: Partial<RaceOptions>) {
-  const orig: RaceSummary[] = [];
+  const runs: { o: RaceSummary; r1: number[]; r2: number[] }[] = [];
   let controlDiff = 0;
   for (const t of tracks)
     for (const s of seeds) {
       const o = origRun(opts, t, s);
-      orig.push(o);
-      if (summarize(race(t, s, testCar(BASE), opts)).rank !== o.rank) controlDiff++; // 대조군: 원본을 한 번 더
+      const again = tryRace(t, s, testCar(BASE), opts); // 대조군: 원본을 한 번 더
+      const plus = (d: number) => STATS.map((stat) => tryRace(t, s, testCar({ ...BASE, [stat]: BASE[stat] + d }), opts));
+      const p1 = plus(1);
+      const p2 = plus(2);
+      if (!o || !again || p1.includes(null) || p2.includes(null)) continue; // 멈춘 레이스가 있는 시드는 뺀다 (STUCK에 기록)
+      if (summarize(again).rank !== o.rank) controlDiff++;
+      runs.push({ o, r1: p1.map((r) => summarize(r!).rank), r2: p2.map((r) => summarize(r!).rank) });
     }
+  const orig = runs.map((x) => x.o);
   const m18 = {
     block: mean(orig.map((r) => r.blockRatio)),
     overtakeShare: mean(orig.map((r) => (r.overtakes > 0 ? 1 : 0))),
@@ -161,11 +186,9 @@ export function layer2(tracks: Track[], seeds: number[], opts: Partial<RaceOptio
     m18.contacts < M18_CONTACTS && '접촉',
   ].filter(Boolean);
   const spread = sd(orig.map((r) => r.rank));
-  const perStat = STATS.map((stat) => {
-    const ranks = (d: number) =>
-      tracks.flatMap((t) => seeds.map((s) => summarize(race(t, s, testCar({ ...BASE, [stat]: BASE[stat] + d }), opts)).rank));
-    const r1 = ranks(1);
-    const r2 = ranks(2);
+  const perStat = STATS.map((stat, si) => {
+    const r1 = runs.map((x) => x.r1[si]);
+    const r2 = runs.map((x) => x.r2[si]);
     const d1 = mean(orig.map((o, i) => o.rank - r1[i]));
     const d2 = mean(orig.map((o, i) => o.rank - r2[i]));
     const top1 = mean(r1.map((r) => (r === 1 ? 1 : 0)));
