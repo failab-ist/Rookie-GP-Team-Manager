@@ -1,7 +1,7 @@
 // 접촉 규칙 2대 시험 (AG-P039 A). T1에서 옆 차선에 나란히 3랩, 차선 변경 없음. 제어 4 / 5 / 7.
 // 2대만으로는 혼전(반경 7.5u 안 3대 이상)이 안 생겨 실수가 없으므로, 실수를 보려고 6대 무리(3차선 × 2줄)도 같이 돌린다.
 // node qa/ctwocar.ts > qa/results/<파일>.md
-import { CAR_LENGTH, TICK_SECONDS } from '../src/config.ts';
+import { CAR_LENGTH, CAR_WIDTH, TICK_SECONDS } from '../src/config.ts';
 import { simulate } from '../src/sim.ts';
 import type { Entry, RaceOptions } from '../src/types.ts';
 import { BASE, f, mean, out, table, TRACKS } from './lib.ts';
@@ -67,7 +67,7 @@ out('# 접촉 규칙 2대 시험 (T1, 3랩, 차선 변경 없음)');
 out();
 out('바탕 설정 OT_FLOW_ALL(부스트 5%), R0 · SS-1. 시드 1~5 평균. 레이서는 모두 같은 능력치, 차는 기준 차.');
 out('- 접촉 = 접촉 시작 수(레이스당). 실수 원인 = 원인 제공 기준이 실수인 접촉. 옆/변경/뒤 = 접촉 종류.');
-out('- 평소 |ε| 최대 = 실수가 아닐 때 횡 오차 크기의 최댓값(u). 최소 옆 간격 = 앞뒤로 겹친 다른 차선 두 차의 횡 거리 최솟값(차 폭 3u 미만이면 접촉).');
+out(`- 평소 |ε| 최대 = 실수가 아닐 때 횡 오차 크기의 최댓값(u). 최소 옆 간격 = 앞뒤로 겹친 다른 차선 두 차의 횡 거리 최솟값(차 폭 ${CAR_WIDTH}u 미만이면 접촉).`);
 out('- 접촉 뒤 순서 바뀜 = 원인이 접촉인 추월(OT-4) 수. 2랩째 시간 = 차들의 2랩째 평균(초).');
 for (const st of CT_STAGES) {
   out();

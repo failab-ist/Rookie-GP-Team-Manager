@@ -40,7 +40,7 @@ if (part === 'collect') {
   for (let k = 0; k < N; k++)
     for (const seed of seeds) {
       const grid = rotate(k);
-      const r = tryRace(t, seed, testCar(BASE), v.opts);
+      const r = tryRace(t, seed, testCar(BASE), v.opts, { grid });
       if (!r) continue;
       acc.races++;
       const winner = r.finishOrder[0];
