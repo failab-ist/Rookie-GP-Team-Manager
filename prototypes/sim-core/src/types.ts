@@ -97,6 +97,7 @@ export const JudgementKind = {
   overtakeS1: 7, // 정식 시도 S1 성공 (추월 사건은 OT-4 앞뒤 바뀜 기록으로 남긴다)
   cornerPriority: 8, // OT-7 코너 우선권 판정. cars = [이긴 차, 진 차] 오름차순, cause = winner:<차>:<front|inner>
   boost: 9, // OT-6 부스트 시작
+  lateHold: 10, // P-1 늦게 빠지기: 정식 시도 조건이 되었지만 같은 차선에 머물기 시작. cars = [머무는 차, 앞차] 오름차순
 } as const;
 export type Judgement = Omit<RaceEvent, 'kind'> & { kind: (typeof JudgementKind)[keyof typeof JudgementKind] };
 
@@ -151,6 +152,7 @@ export type RaceOptions = {
   tryGap: number; // 시도 시작 거리 g_try u (INT §4.3, 진단 비교용, 기본 10)
   otReleaseWidth: number; // OT-2 상한 해제 옆 간격 u (진단 비교용, 기본 차 폭). otRelease가 켜져 있을 때만 쓴다
   carWidth: number; // 차 폭 w_car u (INT §4.4, 측정용, 기본 config CAR_WIDTH). 접촉 판정 · CT-1 여유 · 해제 간격 기본값에 쓴다
+  lateOut: number; // P-1 늦게 빠지기 T_out s (AG-P068 A, 측정용, 0 = 꺼짐)
   laneWidth: number; // 차선 폭 W_lane u (INT §4.1, 측정용, 기본 config LANE_WIDTH). 차선 중심 · 변경 진행 · CT-1 여유에 쓴다
   boostZone: boolean; // OT-6 구간 모드 (트랙 데이터 구간 · 앞 코너 진입 감지 · E1 고정 끝 · 슬립스트림과 큰 값만)
   // 접촉 규칙 정리 스위치 (AG-P039 A, AG-P040 A, 기본 꺼짐)

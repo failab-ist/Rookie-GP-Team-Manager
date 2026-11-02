@@ -106,6 +106,18 @@ test('측정용 차 폭 · 차선 폭(carWidth, laneWidth): 기본값을 넣으�
   assert.throws(() => simulate(input, { carWidth: 0 }), /차 폭|해제/); // 해제 간격 기본값이 차 폭이라 그 검사가 먼저 걸린다
 });
 
+test('P-1 늦게 빠지기(lateOut): 0을 넣으면 옵션을 뺀 결과와 같고, 켜면 결정론 · 머묾 판정 기록, 음수는 거부한다', async () => {
+  const { OT_FLOW_ALL, CT_ALL } = await import('../src/config.ts');
+  const input = { seed: 5, track: tracks[1], laps: 3, entries: lineup };
+  const opts = { ...OT_FLOW_ALL, ...CT_ALL, slipstream: true };
+  const qa = { trace: true };
+  assert.deepEqual(simulate(input, { ...opts, lateOut: 0 }, qa), simulate(input, opts, qa));
+  const a = simulate(input, { ...opts, lateOut: 1 }, qa);
+  assert.deepEqual(a, simulate(input, { ...opts, lateOut: 1 }, qa));
+  assert.ok(a.judgements.some((j) => j.kind === 10));
+  assert.throws(() => simulate(input, { lateOut: -1 }), /T_out/);
+});
+
 test('접촉 규칙 묶음(CT_ALL): 결정론, 음수 속도 없음, 접촉 기록은 종류:책임 기준:원인 제공자 형식', async () => {
   const { OT_FLOW_ALL, CT_ALL, LANE_SLACK } = await import('../src/config.ts');
   for (const track of tracks) {

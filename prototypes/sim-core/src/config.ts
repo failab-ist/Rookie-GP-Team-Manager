@@ -112,6 +112,9 @@ export const TRY_GAP_COMPARE = [TRY_GAP * 1.5, TRY_GAP * 2]; // 지시서 비교
 export const OT_RELEASE_WIDTH_COMPARE = [CAR_WIDTH / 2]; // 지시서 비교값: 상한 해제 옆 간격 차 폭 절반
 // S1 실패 원인 분리 측정 (2026-11-02). 기본값은 CAR_WIDTH, LANE_WIDTH 그대로, 옵션 carWidth · laneWidth로만 바꾼다
 export const CAR_WIDTH_COMPARE = 1.9; // 지시서 비교값: 차 폭 1.9 u (차선 폭 4 그대로). AG-P061 B 뒤로 기본값 CAR_WIDTH와 같다
+// P-1 늦게 빠지기 (디렉터 결정 AG-P068 A, 2026-11-02). 0 = 꺼짐(기본). 켜면 직선에서 제동 시작까지 남은 시간이 T_out 이하일 때 정식 시도를 시작한다
+export const LATE_OUT = 0;
+export const LATE_OUT_STEPS = [0.5, 1.0, 1.5, 2.0]; // 지시서 비교값 s
 export const LANE_WIDTH_COMPARE = 5; // 지시서 비교값: 차선 폭 5 u (차 폭 기본값, 차선 수 3 그대로)
 export const CHASE_SECONDS = 1.0; // 가안, OT-5 추격 상태 = 앞차(차선 무관)와 시간 간격 1.0 s 이내
 export const PASS_HOLD_SECONDS = 1.0; // 가안, OT-4 앞뒤가 바뀐 뒤 이 시간 유지되면 추월로 기록

@@ -1,6 +1,7 @@
 // S1 실패 원인 분리 측정 (측정만, 기본값 그대로. 지시서 2026-11-02). 측정용 옵션 carWidth · laneWidth를 하나씩만 바꾼다.
 // 조건은 s1cap.ts 기준 설정과 같다: L-B 3트랙, MOTIF_ALL(더티 에어 3, 부스트 4), 참가 10대, 출발 순서 10가지 순환.
-// node qa/s1split.ts collect <base|car19|lane5> <adjust|confirm> <M1|M2|M3> > <파일>.json
+// node qa/s1split.ts collect <base|car19|lane5|late05|late10|late15|late20> <adjust|confirm> <M1|M2|M3> > <파일>.json
+// late* = P-1 늦게 빠지기 T_out 0.5 · 1.0 · 1.5 · 2.0 s (AG-P068 A, 측정용 옵션 lateOut)
 // node qa/s1split.ts report <json 파일들>
 //
 // 시간축 (s1cap.ts · s1speed.ts와 같음): frames[k] = 틱 k 이동 뒤, trace[T-1] = 틱 T(속도는 이동 뒤, 차선 상태는 (3)단계 뒤, 슬립 · 상한 표시는 이동 전 상태).
@@ -24,7 +25,9 @@ const SETS: Record<string, { name: string; opts: Partial<RaceOptions> }> = {
   base: { name: `기준선 (차 폭 ${C.CAR_WIDTH}, 차선 폭 ${C.LANE_WIDTH})`, opts: FINAL },
   car19: { name: `차 폭 ${C.CAR_WIDTH_COMPARE} (차선 폭 ${C.LANE_WIDTH})`, opts: { ...FINAL, carWidth: C.CAR_WIDTH_COMPARE } },
   lane5: { name: `차선 폭 ${C.LANE_WIDTH_COMPARE} (차 폭 ${C.CAR_WIDTH})`, opts: { ...FINAL, laneWidth: C.LANE_WIDTH_COMPARE } },
+  ...Object.fromEntries(C.LATE_OUT_STEPS.map((x) => [`late${String(x * 10).padStart(2, '0')}`, { name: `P-1 T_out ${x.toFixed(1)} s`, opts: { ...FINAL, lateOut: x } }])),
 };
+const spearman = (grid: number[], order: number[]) => 1 - (6 * grid.reduce((s, carI, slot) => s + (slot - order.indexOf(carI)) ** 2, 0)) / (N * (N * N - 1));
 const rotate = (k: number) => Array.from({ length: N }, (_, slot) => (slot - k + N) % N);
 const ONE_S = Math.round(1 / C.TICK_SECONDS);
 const CAUSE_KO: Record<string, string> = { start: '출발부터 1위', contact: '접촉', mistake: '상대 실수', boost: '부스트', brake: '제동', corner: '코너', exit: '탈출', straight: '직선', none: 'OT-4 기록 없음' };
@@ -33,6 +36,8 @@ type Att = {
   ok: boolean;
   tc: null | { v: number; slip: number; dv1: number; dur: number | null; ticks: number; both98: number; rA: number[]; rD: number[]; overlap: number | null };
   segs: Record<string, { full: number; slipGain: number }>;
+  out: { gap: number; r: number }; // 시도를 시작한 순간(판단 직전 틱 T0−1 이동 뒤): 앞차 간격, 공격 차 속도 ÷ 실효 V_top
+  hold: null | { dur: number; slip: number; slipGain: number }; // P-1 머묾(종류 10 → 시도 시작): 시간, 슬립스트림 켜진 틱 비율, 줄인 거리
 };
 
 const [part, key, set, trackArg] = process.argv.slice(2);
@@ -48,7 +53,8 @@ if (part === 'collect') {
   const zonePrev = course.segs[(course.segs.indexOf(zone) - 1 + course.segs.length) % course.segs.length];
   const boostLen = boostZoneLength(zone.length, zonePrev.bend, zone.next!.bend, carParams(BASE));
   const atts: Att[] = [];
-  const wins = { races: 0, pole: 0, back: 0, causes: {} as Record<string, number> };
+  const wins = { races: 0, pole: 0, back: 0, causes: {} as Record<string, number>, rho: [] as number[], finals: Array.from({ length: N }, () => [] as number[]), passes: 0, passesS1: 0, overlapTicks: 0, overlapRaces: 0 };
+  const W = v0.opts.carWidth ?? C.CAR_WIDTH;
   let maxRatio = 0;
   for (let k = 0; k < N; k++)
     for (const seed of seeds) {
@@ -67,6 +73,22 @@ if (part === 'collect') {
       const pass = lead && r.events.find((e) => e.kind === 3 && e.tick === lead.tick && e.cause!.endsWith(`:by:${winner}`));
       const cause = !lead ? 'start' : pass ? pass.cause!.split(':')[0] : 'none';
       wins.causes[cause] = (wins.causes[cause] ?? 0) + 1;
+      wins.rho.push(spearman(grid, r.finishOrder));
+      grid.forEach((carI, sl) => wins.finals[sl].push(r.finishOrder.indexOf(carI) + 1));
+      wins.passes += r.events.filter((e) => e.kind === 3).length;
+      wins.passesS1 += r.events.filter((e) => e.kind === 3 && e.cause!.includes(':S1:')).length;
+      // 몸체 겹침 (carwidth.ts와 같은 정의): lateral[k] = frames[k+1]
+      let anyOv = false;
+      r.lateral.forEach((ys, kk) => {
+        const xs = fr[kk + 1];
+        for (let i = 0; i < N; i++)
+          for (let j = i + 1; j < N; j++)
+            if (xs[i] < 3 * L && xs[j] < 3 * L && Math.abs(xs[i] - xs[j]) < C.CAR_LENGTH && Math.abs(ys[i] - ys[j]) < W) {
+              wins.overlapTicks++;
+              anyOv = true;
+            }
+      });
+      if (anyOv) wins.overlapRaces++;
 
       const boosts = r.judgements.filter((j) => j.kind === 9).map((j) => {
         const s = fr[j.tick][j.cars[0]];
@@ -138,7 +160,23 @@ if (part === 'collect') {
           if (ratio(T, a) >= 0.98) e.full += C.TICK_SECONDS;
           if (tr[T - 1][a][5]) e.slipGain += Math.max(0, tr[T - 1][a][0] - vTopEff(T, a, 0)) * C.TICK_SECONDS;
         }
-        atts.push({ ok: res.kind === 7, tc, segs });
+        // 머묾: 같은 두 차의 마지막 종류 10이 이 시도 전, 그리고 그 사이 같은 쌍의 다른 시도가 없을 때
+        const holdJ = [...r.judgements].reverse().find((j) => j.kind === 10 && j.tick <= T0 && j.cars[0] === x && j.cars[1] === y);
+        const prevTry = [...tries].reverse().find((j) => j.tick < T0 && j.cars[0] === x && j.cars[1] === y);
+        let hold: Att['hold'] = null;
+        if (holdJ && (!prevTry || prevTry.tick < holdJ.tick)) {
+          let on = 0;
+          let gain = 0;
+          for (let T = holdJ.tick + 1; T <= T0; T++) {
+            if (tr[T - 1][a][5]) {
+              on++;
+              gain += Math.max(0, tr[T - 1][a][0] - vTopEff(T, a, 0)) * C.TICK_SECONDS;
+            }
+          }
+          const n = T0 - holdJ.tick;
+          hold = { dur: n * C.TICK_SECONDS, slip: n ? on / n : 0, slipGain: gain };
+        }
+        atts.push({ ok: res.kind === 7, tc, segs, out: { gap: fr[T0 - 1][d] - fr[T0 - 1][a] - C.CAR_LENGTH, r: ratio(T0 - 1, a) }, hold });
       }
     }
   process.stdout.write(JSON.stringify({ key, name: v0.name, set, track: t.id, atts, wins, maxRatio, stuck: STUCK.length }) + '\n');
@@ -224,6 +262,38 @@ if (part === 'report') {
         for (const d of ds) for (const [c, n] of Object.entries(d.wins.causes as Record<string, number>)) causes[c] = (causes[c] ?? 0) + n;
         const order = ['start', 'contact', 'mistake', 'boost', 'brake', 'corner', 'exit', 'straight', 'none'].filter((c) => causes[c]);
         return [name(k), races, at.length, `${at.filter((a) => a.ok).length} (${pc(at.filter((a) => a.ok).length, at.length)})`, pc(ds.reduce((s, d) => s + d.wins.pole, 0), races), pc(ds.reduce((s, d) => s + d.wins.back, 0), races), order.map((c) => `${CAUSE_KO[c]} ${pc(causes[c], races)}`).join('<br>')];
+      }),
+    ),
+  );
+  out();
+  out('### 6. 빠지기 전 같은 차선에 머문 구간 (P-1 머묾 판정 종류 10 → 정식 시도 시작) · 시도를 시작한 순간');
+  out();
+  out('머문 시간 · 슬립스트림 켜진 틱 비율 · 줄인 거리는 머묾이 있었던 시도만. 시작 순간 = 판단 직전 틱 이동 뒤(간격 = 앞차 − 공격 차 − 차 길이, 속도 ÷ 실효 V_top). 값은 평균 · 10 / 25 / 50 / 75 / 90 백분위.');
+  out();
+  out(
+    table(
+      ['설정 · 묶음', '시도', '머묾 있음', '머문 시간 (s)', '슬립스트림 켜진 비율', '줄인 거리 (u)', '시작 순간 간격 (u)', '시작 순간 속도 ÷ 실효 V_top'],
+      rows((n, g) => {
+        const hs = g.map((a) => a.hold).filter((x): x is NonNullable<Att['hold']> => !!x);
+        return [n, g.length, hs.length, q(hs.map((h) => h.dur), 2), q(hs.map((h) => h.slip)), q(hs.map((h) => h.slipGain), 2), q(g.map((a) => a.out.gap), 2), q(g.map((a) => a.out.r))];
+      }),
+    ),
+  );
+  out();
+  out('### 7. 레이스당 추월 · 순위 상관 · 출발 자리 몫 · 겹침');
+  out();
+  out(
+    table(
+      ['설정', '레이스', '추월 (OT-4 전체, 레이스당)', '그중 S1 중 추월', '출발 · 최종 순위 상관', '출발 자리 몫', '멈춘 레이스', '몸체 겹침 (틱 × 두 차, 레이스 수)'],
+      keys.map((k) => {
+        const ds = byKey(k);
+        const races = ds.reduce((s, d) => s + d.wins.races, 0);
+        const finals = Array.from({ length: N }, (_, i) => ds.flatMap((d) => d.wins.finals[i] as number[]));
+        const all = finals.flat();
+        const mu = mean(all);
+        const share = finals.reduce((s, g) => s + g.length * (mean(g) - mu) ** 2, 0) / all.reduce((s, x) => s + (x - mu) ** 2, 0);
+        const sum = (fn: (d: (typeof ds)[number]) => number) => ds.reduce((s, d) => s + fn(d), 0);
+        return [name(k), races, f(sum((d) => d.wins.passes) / races, 2), f(sum((d) => d.wins.passesS1) / races, 2), f(mean(ds.flatMap((d) => d.wins.rho)), 3), pc(share, 1), sum((d) => d.stuck), `${sum((d) => d.wins.overlapTicks)} (${sum((d) => d.wins.overlapRaces)})`];
       }),
     ),
   );

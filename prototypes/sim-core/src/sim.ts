@@ -48,6 +48,7 @@ export const DEFAULT_OPTIONS: RaceOptions = {
   otReleaseWidth: C.CAR_WIDTH,
   carWidth: C.CAR_WIDTH,
   laneWidth: C.LANE_WIDTH,
+  lateOut: C.LATE_OUT,
   boostZone: C.BOOST_ZONE,
   ctWobble: C.CT_WOBBLE,
   ctLine: C.CT_LINE,
@@ -86,6 +87,7 @@ type Car = {
   log: CarStatsLog;
   vPrev: number; // 직전 틱 속도 (OT-4 원인 판정)
   pendingReturn: number | null; // OT-3: 코너에서 실패하면 다음 직선에서 원래 차선으로
+  holdFor: number | null; // P-1: 지난 판단 틱에 이 앞차 뒤에 머물렀음
   boostFrom: number; // OT-6 구간 모드에서 부스트가 시작되는 누적 거리 (아니면 -Infinity)
   boostUntil: number; // OT-6 부스트가 끝나는 누적 거리
   yieldTo: number | null; // OT-7 코너 우선권을 진 상대
@@ -105,6 +107,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
   if (!(o.latSpeed > 0)) throw new Error('횡 속도 v_lat은 0보다 커야 한다 (INT §4.1)');
   if (!(o.tryGap > 0)) throw new Error('시도 시작 거리 g_try는 0보다 커야 한다 (INT §4.3)');
   if (!(o.otReleaseWidth > 0)) throw new Error('상한 해제 옆 간격은 0보다 커야 한다 (OT-2)');
+  if (!(o.lateOut >= 0)) throw new Error('P-1 T_out은 0 이상 (0 = 꺼짐)');
   if (!(o.carWidth > 0 && o.laneWidth >= o.carWidth)) throw new Error('차 폭은 0보다 크고 차선 폭 이하 (INT §4.1, §4.4)');
   const laneCenter = (lane: number) => o.laneWidth / 2 + o.laneWidth * lane; // INT R1-6 (2, 6, 10 u)
   const laneSlack = (o.laneWidth - o.carWidth) / 2; // CT-1 차선 여유 (config LANE_SLACK과 같은 계산)
@@ -162,6 +165,7 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
     },
     vPrev: 0,
     pendingReturn: null,
+    holdFor: null,
     boostFrom: -Infinity,
     boostUntil: -Infinity,
     yieldTo: null,
@@ -447,6 +451,19 @@ export function simulate(input: RaceInput, opts: Partial<RaceOptions> = {}, qa: 
         }
         let lanes = [c.from - 1, c.from + 1].filter((l) => l >= 0 && l < o.laneCount && !windowBusy(c, l));
         if (!lanes.length) continue;
+        // P-1 늦게 빠지기 (AG-P068 A): 직선에서는 다음 코너 제동 시작점까지 남은 시간이 T_out 이하일 때만 시작한다.
+        // 제동 시작점 = 직선 끝 − (v² − 코너 한계²) / (2 a_brk), 코너 한계는 이번 틱 능력치(더티 에어 포함). 다음 구간이 코너가 아니면 지금처럼 바로 시작
+        const heldBefore = c.holdFor;
+        c.holdFor = null;
+        if (o.lateOut > 0 && seg.kind === 'straight' && seg.next?.kind === 'corner') {
+          const vc = vCorner(p, seg.next.bend);
+          const toBrake = seg.end - (c.s % L) - Math.max(0, c.v * c.v - vc * vc) / (2 * p.aBrk);
+          if (toBrake / Math.max(c.v, 1) > o.lateOut) {
+            c.holdFor = f.i;
+            if (heldBefore !== f.i) judge(JudgementKind.lateHold, [c.i, f.i]);
+            continue;
+          }
+        }
         if (solverActive(c)) {
           // 침착한 해결사: 위험한 차선은 포기하고, 남으면 주변 차가 적은 차선 (디렉터 2026-11-02)
           c.log.solver.opportunities++;
