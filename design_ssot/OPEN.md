@@ -12,9 +12,9 @@ OWNER=unresolved_design_items
 
 | ID | 항목 | 현재 가안 · 단서 | 근거 | 상태 |
 |---|---|---|---|---|
-| O-001 | 10대 레이스 엔진 | 충돌 · 추월 · 출발 슬롯 공정성 · 시드 재현 · 경기 길이(1회 3~5분 목표) · 결정: AG-P036 A, P037 A, P038 A, P039 A, P042 A, P044 A, P054 D (INT §12) | §14.1 · §12-C | OPEN |
-| O-002 | 차량 4능력치 모델 | 실제 물리 공식, 모델별 MAX, 총 전력 계산 · 결정: AG-P044 A, AG-P048 A (CAR §14, INT §12) | §4.2 | OPEN |
-| O-003 | 레이서 3능력치 정의 | 추월 · 제어 · 집중의 시뮬레이터 동작, 예시 총합 15 · 분포 7/4/4 · 결정: AG-P036 A, P040 A, P041 A, P043 A (RACER §11, INT §12) | §4.3 | OPEN |
+| O-001 | 10대 레이스 엔진 | 충돌 · 추월 · 출발 슬롯 공정성 · 시드 재현 · 경기 길이(1회 3~5분 목표) · 결정: AG-P036 A, P037 A, P038 A, P039 A, P042 A, P044 A, P054 D, AG-P061 B, P063 C, P066 D, P067 B, P068 A, P070 C, P073 B (INT §12, §12.1) | §14.1 · §12-C | OPEN |
+| O-002 | 차량 4능력치 모델 | 실제 물리 공식, 모델별 MAX, 총 전력 계산 · 결정: AG-P044 A, AG-P048 A, AG-P064 B, AG-P072 A (CAR §14, INT §12, §12.1) | §4.2 | OPEN |
+| O-003 | 레이서 3능력치 정의 | 추월 · 제어 · 집중의 시뮬레이터 동작, 예시 총합 15 · 분포 7/4/4 · 결정: AG-P036 A, P040 A, P041 A, P043 A, AG-P064 B (RACER §11, INT §12, §12.1) | §4.3 | OPEN |
 | O-004 | 고유 패시브 3종 | 발동 조건 · 행동 · 반대급부 · 화면 표시. 초안: 틈새 사냥꾼 / 코너 설계자 / 침착한 해결사 | §4.4 | OPEN |
 | O-005 | 리그 전력 상한 | 능력치 · 패시브 · 차량 성장 · 튜닝을 어떤 코스트로 환산할지 — 선택지: 차량 캡만 vs 종합 코스트(패시브 포함) | §5.5 · §14.1 | OPEN |
 | O-006 | 게임 장면 렌더러 | Phaser 우선, 대안 PixiJS. `TECH_STACK.md` §P0 비주얼 기술 검증으로 결정 | TECH_STACK | OPEN |
@@ -49,3 +49,34 @@ OWNER=unresolved_design_items
 | O-208 | 영문명 · 상표 | `Rookie GP: Team Manager` 가제. 한국 · 미국 · 주요국 상표 조사 | §16.1 | OPEN |
 | O-209 | 글로벌 시간대 | 리그 시각은 KST 가안 | §5.1 | OPEN |
 | O-210 | 아트 제작 | 지금은 디자이너 영입 안 함, P0 이후 외주 검토 (User 2026-11-01) | — | OPEN |
+
+## 초안 질문 (Q 번호)
+
+> 출처: `OVERTAKE_FLOW_F1_DRAFT.md`(Q-98~Q-107)와 `LATERAL_POSITION_WIDTH_DRAFT.md`(Q-108~Q-119)의 질문 목록. 근거 줄은 커밋 8d8251b 기준이다. OTF는 AG-P069 작업이 고치는 중이라 줄이 바뀔 수 있다.
+> 연결 O 번호가 원문에 없는 Q-101, Q-115~Q-118은 각 문서 머리말의 RELATED_OPEN(O-001)을 적었다.
+> 번호는 기존 OPEN(O-xxx)과 겹치지 않는다. 상태는 모두 `OPEN`이며 닫지 않았다.
+
+| ID | 항목 | 현재 가안 · 단서 | 근거 | 상태 |
+|---|---|---|---|---|
+| Q-98 | O-001 · 관성 기준 V_top | 차 V_top(125)인지 실효 V_top인지. 실효값이면 e0의 정의가 바뀐다 | OVERTAKE_FLOW_F1_DRAFT.md:263 | OPEN |
+| Q-99 | O-001 · 관성의 선두 영향 | 선두 차에도 관성을 줄지. 주면 뒤차 막힘 상한이 올라간다 | OVERTAKE_FLOW_F1_DRAFT.md:264 | OPEN |
+| Q-100 | O-001 · 3대가 나란히 설 때 | OT-7은 두 차만 판정(`sim.ts:608-610`). 밀림 칸 점유와 양보 순서 | OVERTAKE_FLOW_F1_DRAFT.md:265 | OPEN |
+| Q-101 | O-001(머리말) · 방어 차 늦은 제동 | v0에서 다루지 않는다. 기본 흐름 확인 뒤에 넣는다(AG-P037 A, 나중) | OVERTAKE_FLOW_F1_DRAFT.md:266 | OPEN |
+| Q-102 | O-001 · 실수 기준 확률 p0 | 근거 없는 값. 단계 3에서 0 · 0.1 · 0.3만 비교 | OVERTAKE_FLOW_F1_DRAFT.md:267 | OPEN |
+| Q-103 | O-001 · 0단계가 가설과 다를 때 | B-1부터 시험. 제동 시작 순간 겹침 > 0이 6.9%라 단독 효과가 작을 것으로 본다 | OVERTAKE_FLOW_F1_DRAFT.md:268 | OPEN |
+| Q-104 | O-001 · 밀림 대체 방식 | (가) 양보 (나) 접촉 규칙으로 넘김 (다) 속도 손실만. 추천 없음 | OVERTAKE_FLOW_F1_DRAFT.md:269 | OPEN |
+| Q-105 | O-001 · 새 용어와 이름 충돌 | 붙기 · 빠지기 · 나란히 · 결판 · 기록 · 관성 · 늦은 제동 · 과감성 · 실수 비용 · 겹침의 GLOSSARY 등록 | OVERTAKE_FLOW_F1_DRAFT.md:270 | OPEN (단서: 용어집 '대기' 6개 등록, 나머지는 미등록) |
+| Q-106 | O-003 · 레이서 추월의 두 쓰임 | p_try(RACER F3)와 과감성 λ. 두 쓰임을 함께 둘지 나눌지 | OVERTAKE_FLOW_F1_DRAFT.md:275 | OPEN |
+| Q-107 | O-002 · 실수 결과의 손실 식 | ΔV = v_exit · δ · (1 − κ · n_집중)의 δ · κ 값과 근거. 가안도 근거 없음 | OVERTAKE_FLOW_F1_DRAFT.md:276 | OPEN |
+| Q-108 | O-001 · y 부호 | 왼쪽 음수 · 오른쪽 양수(차선 규약 A와 같은 순서)로 둘지 | LATERAL_POSITION_WIDTH_DRAFT.md:454 | OPEN |
+| Q-109 | O-001 · 폭 경계 | T-A 계단 / T-B 이어 줄임. 잘린 차가 겹칠 때 접촉으로 넘길지(§3.4) | LATERAL_POSITION_WIDTH_DRAFT.md:455 | OPEN |
+| Q-110 | O-001 · 스위치 정리 | `otRelease` · `capWhileChanging` · `blockCap`의 차선 전제 스위치를 어떻게 둘지 | LATERAL_POSITION_WIDTH_DRAFT.md:456 | OPEN |
+| Q-111 | O-001 · innerLane 데이터 | 차선 번호를 방향으로 바꿔 읽을지, 필드를 없앨지 | LATERAL_POSITION_WIDTH_DRAFT.md:457 | OPEN |
+| Q-112 | O-003 · 가로 오차 | CT-1 평소 가로 오차 허용 범위(±m/2, y_max) | LATERAL_POSITION_WIDTH_DRAFT.md:458 | OPEN |
+| Q-113 | O-001 · 단독 랩타임과 폭 | 좁은 트랙에서 혼자 달리는 차의 랩타임도 바꿀지. W-A는 나란히일 때만 손해 | LATERAL_POSITION_WIDTH_DRAFT.md:459 | OPEN |
+| Q-114 | O-001 · 코너 공간식 | W-A · W-B1 · W-B2 중 무엇을 쓸지, 함께 쓸지 | LATERAL_POSITION_WIDTH_DRAFT.md:460 | OPEN |
+| Q-115 | O-001(머리말) · 용어 | 가로 위치 · 구간 폭 · 같은 줄 · 좌우 겹침 · 나란히 · 여유 등록, "옆 차선 점유 되돌림" 이름 변경 | LATERAL_POSITION_WIDTH_DRAFT.md:461 | OPEN (단서: 가로 위치 · 구간 폭을 용어집 '대기' 등록, 닫지 않음) |
+| Q-116 | O-001(머리말) · 축척 | 1 u = 1 m를 기하에만 쓰는 가정을 채택할지. 길이 방향은 ρ 축소 | LATERAL_POSITION_WIDTH_DRAFT.md:462 | OPEN (단서: AG-P070 C가 기하 부분에 답함, 닫지 않음) |
+| Q-117 | O-001(머리말) · 차 길이 | 차 길이 6 u의 근거. 2026 전체 길이 규정값 확인 뒤 정할지 | LATERAL_POSITION_WIDTH_DRAFT.md:463 | OPEN |
+| Q-118 | O-001(머리말) · 구현 비용 · 판정 회귀 | `sim.ts` 49줄 · 패시브 3종 · 기록 형식이 함께 바뀐다. M-W0 재현으로 차이를 먼저 확인할지 | LATERAL_POSITION_WIDTH_DRAFT.md:464 | OPEN |
+| Q-119 | O-007 · 화면 | κ = 2 px/u에서 차 폭 1.9 u = 3.8 px. 가로 위치 0.5 u(= 1 px)가 보이는지 | LATERAL_POSITION_WIDTH_DRAFT.md:465 | OPEN |

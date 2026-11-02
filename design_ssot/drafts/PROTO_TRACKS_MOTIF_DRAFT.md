@@ -5,6 +5,7 @@
 > 근거 초안: CAR = `design_ssot/drafts/CAR_STATS_TRACKS_PROTO_DRAFT.md`, INT = `design_ssot/drafts/RACE_INTERACTION_P0_DRAFT.md`, 단위 · 길이 = `design_ssot/drafts/RACE_UNIT_LENGTH_CAMERA_P0_DRAFT.md`.
 > 승인 기획: AG-P030 A(`.studio/decisions.jsonl:42`). 이 문서는 CAR 본문, INT 본문, `prototypes/` 코드를 수정하지 않는다.
 > 짝 문서: `design_ssot/drafts/PROTO_TRACKS_DIRECTION_BOOST_DRAFT.md`(코너 방향 · 안쪽 차선 · 추격 부스트 구간, AG-P035 가안). 이 문서의 §7 값은 바꾸지 않는다.
+> 구간 폭: AG-P063 C(구간마다 폭), AG-P067 B(조사 뒤 입력). 값과 배정 가안은 `design_ssot/drafts/LATERAL_POSITION_WIDTH_DRAFT.md` §7.
 
 ---
 
@@ -87,7 +88,7 @@
 |---|---|---|
 | Red Bull Ring | 짧은 트랙에 긴 직선이 적고 코너가 많지 않다. 긴 직선 뒤 급한 코너가 바로 온다 | M1은 6개 코너를 모두 단독으로 두고, 헤어핀 뒤 직선을 가장 길게 둔다 |
 | Monza | 긴 직선과 저속 연속 코너(샤켄)가 있다 | M1은 샤켄을 두지 않는다. 저속 코너는 헤어핀 1개만 둔다 |
-| Baku | 매우 긴 직선과 좁은 저속 구간 | M1은 긴 직선 길이를 Lreal 260 u(기준 1000 u 중)로 두고, 좁은 구간은 두지 않는다 |
+| Baku | 매우 긴 직선과 좁은 저속 구간 | M1은 긴 직선 길이를 Lreal 260 u(기준 1000 u 중)로 두고, 좁은 구간은 두지 않는다 (구간 폭: AG-P063 C · AG-P067 B, `LATERAL_POSITION_WIDTH_DRAFT.md` §7) |
 
 추천(가안): Red Bull Ring 구조(짧은 트랙, 긴 직선 뒤 급코너)를 뼈대로 쓴다. Baku의 긴 직선 한 개를 헤어핀 뒤 직선 참고로 쓴다(Q-61).
 
